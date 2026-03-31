@@ -195,38 +195,40 @@ function AttendeeProfile({
           return (
             <div
               key={event.id}
-              className="flex items-center px-10 py-5 border-b border-[#f5f5f5] last:border-b-0 hover:bg-[#fafafa] transition-colors max-sm:flex-wrap max-sm:gap-2"
+              className="px-10 py-5 border-b border-[#f5f5f5] last:border-b-0 hover:bg-[#fafafa] transition-colors max-sm:px-5 max-sm:py-4"
             >
-              <div
-                className={`w-10 h-10 rounded-full flex items-center justify-center text-sm flex-shrink-0 mr-5 border-2 ${
-                  hasAccess
-                    ? "bg-[var(--green-bg)] text-[var(--green)] border-green-200"
-                    : "bg-[var(--red-bg)] text-[var(--red)] border-red-200"
-                }`}
-              >
-                {hasAccess ? <FaCheck /> : <FaTimes />}
-              </div>
-              <div className="flex-1">
-                <div className="font-semibold text-gray-800 text-[0.95rem] mb-0.5">
-                  {event.name}
+              <div className="flex items-start gap-4">
+                <div
+                  className={`w-10 h-10 rounded-full flex items-center justify-center text-sm flex-shrink-0 border-2 mt-0.5 ${
+                    hasAccess
+                      ? "bg-[var(--green-bg)] text-[var(--green)] border-green-200"
+                      : "bg-[var(--red-bg)] text-[var(--red)] border-red-200"
+                  }`}
+                >
+                  {hasAccess ? <FaCheck /> : <FaTimes />}
                 </div>
-                <div className="text-xs text-[var(--gray)]">
-                  {event.meta} · {event.venue}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-start justify-between gap-3 max-sm:flex-col max-sm:gap-0.5">
+                    <div className="font-semibold text-gray-800 text-[0.95rem]">
+                      {event.name}
+                    </div>
+                    <div
+                      className={`text-xs font-bold px-3 py-1 rounded-full text-center flex-shrink-0 ${
+                        hasAccess
+                          ? "bg-[var(--green-bg)] text-[var(--green)]"
+                          : "bg-[var(--red-bg)] text-[var(--red)]"
+                      }`}
+                    >
+                      {hasAccess ? "ACCESS" : "NO ACCESS"}
+                    </div>
+                  </div>
+                  <div className="text-xs text-[var(--gray)] mt-1">
+                    {event.date} · {event.time}
+                  </div>
+                  <div className="text-xs text-[#aaa] mt-0.5">
+                    {event.meta} · {event.venue}
+                  </div>
                 </div>
-              </div>
-              <div className="text-sm text-[var(--gray)] font-medium text-right min-w-[100px] max-sm:min-w-0">
-                {event.date}
-                <br />
-                <span className="text-xs text-[#aaa]">{event.time}</span>
-              </div>
-              <div
-                className={`text-xs font-bold px-3 py-1 rounded-full min-w-[80px] text-center ml-4 ${
-                  hasAccess
-                    ? "bg-[var(--green-bg)] text-[var(--green)]"
-                    : "bg-[var(--red-bg)] text-[var(--red)]"
-                }`}
-              >
-                {hasAccess ? "ACCESS" : "NO ACCESS"}
               </div>
             </div>
           );
