@@ -1,5 +1,8 @@
 "use server";
 
+import { cookies } from "next/headers";
+import { createHmac } from "crypto";
+import { encryptId, decryptId } from "@/lib/crypto";
 import { connectDB } from "@/lib/mongodb";
 import { AttendeeModel } from "@/lib/models/Attendee";
 import {
@@ -7,7 +10,10 @@ import {
   type AttendeePackage,
   type PaymentStatus,
   type ScheduleOption,
+  type DiscountType,
   packageLabels,
+  packagePrices,
+  getDiscountPercent,
   attendees as fallbackAttendees,
 } from "@/lib/data";
 
@@ -17,6 +23,59 @@ export async function verifyAdmin(password: string): Promise<boolean> {
     return false;
   }
   return password === adminPassword;
+}
+
+const SESSION_COOKIE = "hwb_admin_session";
+const SESSION_MAX_AGE = 7 * 24 * 60 * 60; // 7 days
+
+function computeSessionToken(password: string): string {
+  return createHmac("sha256", password)
+    .update("hwb-admin-session-v1")
+    .digest("hex");
+}
+
+export async function createAdminSession(password: string): Promise<boolean> {
+  const adminPassword = process.env.ADMIN_PASSWORD;
+  if (!adminPassword || password !== adminPassword) return false;
+  const token = computeSessionToken(adminPassword);
+  const cookieStore = await cookies();
+  cookieStore.set(SESSION_COOKIE, token, {
+    httpOnly: true,
+    sameSite: "strict",
+    maxAge: SESSION_MAX_AGE,
+    path: "/",
+    secure: process.env.NODE_ENV === "production",
+  });
+  return true;
+}
+
+export async function checkAdminSession(): Promise<boolean> {
+  const adminPassword = process.env.ADMIN_PASSWORD;
+  if (!adminPassword) return false;
+  const cookieStore = await cookies();
+  const cookie = cookieStore.get(SESSION_COOKIE);
+  if (!cookie) return false;
+  const expected = computeSessionToken(adminPassword);
+  return cookie.value === expected;
+}
+
+export async function clearAdminSession(): Promise<void> {
+  const cookieStore = await cookies();
+  cookieStore.delete(SESSION_COOKIE);
+}
+
+export async function encryptAttendeeId(id: string): Promise<string> {
+  return encryptId(id);
+}
+
+export async function getAttendeeByToken(
+  token: string
+): Promise<{ id: string; attendee: Attendee } | null> {
+  const id = decryptId(token);
+  if (!id) return null;
+  const attendee = await getAttendee(id);
+  if (!attendee) return null;
+  return { id, attendee };
 }
 
 function generateId(counter: number): string {
@@ -34,6 +93,7 @@ export async function addAttendee(formData: FormData): Promise<{
   const pkg = formData.get("package") as AttendeePackage;
   const selectedSchedule = formData.get("selectedSchedule") as ScheduleOption | null;
   const paymentStatus = formData.get("paymentStatus") as PaymentStatus;
+  const discountType = (formData.get("discountType") as DiscountType) || "none";
   const notes = formData.get("notes") as string;
 
   if (!name || !email || !pkg || !paymentStatus) {
@@ -43,6 +103,10 @@ export async function addAttendee(formData: FormData): Promise<{
   if (pkg === "3lectures" && !selectedSchedule) {
     return { success: false, message: "Please select a lecture schedule for Package B." };
   }
+
+  const discountPercent = getDiscountPercent(discountType, pkg);
+  const originalAmount = packagePrices[pkg];
+  const finalAmount = Math.round(originalAmount * (1 - discountPercent / 100));
 
   try {
     await connectDB();
@@ -60,6 +124,10 @@ export async function addAttendee(formData: FormData): Promise<{
       selectedSchedule: pkg === "3lectures" ? selectedSchedule : null,
       registrationDate: new Date().toISOString().split("T")[0],
       paymentStatus,
+      discountType,
+      discountPercent,
+      originalAmount,
+      finalAmount,
       notes: (notes || "").trim(),
     });
 
@@ -87,6 +155,10 @@ export async function getAttendee(id: string): Promise<Attendee | null> {
         selectedSchedule: (doc.selectedSchedule as ScheduleOption) || null,
         registrationDate: doc.registrationDate,
         paymentStatus: doc.paymentStatus as PaymentStatus,
+        discountType: (doc.discountType as DiscountType) || "none",
+        discountPercent: doc.discountPercent ?? 0,
+        originalAmount: doc.originalAmount ?? packagePrices[doc.package as AttendeePackage] ?? 0,
+        finalAmount: doc.finalAmount ?? packagePrices[doc.package as AttendeePackage] ?? 0,
         notes: doc.notes,
       };
     }
@@ -98,9 +170,9 @@ export async function getAttendee(id: string): Promise<Attendee | null> {
 }
 
 export async function getAllAttendees(): Promise<
-  { id: string; attendee: Attendee }[]
+  { id: string; attendee: Attendee; token: string }[]
 > {
-  const results: { id: string; attendee: Attendee }[] = [];
+  const results: { id: string; attendee: Attendee; token: string }[] = [];
 
   try {
     await connectDB();
@@ -109,6 +181,7 @@ export async function getAllAttendees(): Promise<
     for (const doc of docs) {
       results.push({
         id: doc.attendeeId,
+        token: encryptId(doc.attendeeId),
         attendee: {
           name: doc.name,
           email: doc.email,
@@ -118,6 +191,10 @@ export async function getAllAttendees(): Promise<
           selectedSchedule: (doc.selectedSchedule as ScheduleOption) || null,
           registrationDate: doc.registrationDate,
           paymentStatus: doc.paymentStatus as PaymentStatus,
+          discountType: (doc.discountType as DiscountType) || "none",
+          discountPercent: doc.discountPercent ?? 0,
+          originalAmount: doc.originalAmount ?? packagePrices[doc.package as AttendeePackage] ?? 0,
+          finalAmount: doc.finalAmount ?? packagePrices[doc.package as AttendeePackage] ?? 0,
           notes: doc.notes,
         },
       });
@@ -129,7 +206,7 @@ export async function getAllAttendees(): Promise<
   }
 
   for (const [id, attendee] of Object.entries(fallbackAttendees)) {
-    results.push({ id, attendee });
+    results.push({ id, attendee, token: encryptId(id) });
   }
   return results;
 }
@@ -161,11 +238,16 @@ export async function updateAttendee(
   const pkg = formData.get("package") as AttendeePackage;
   const selectedSchedule = formData.get("selectedSchedule") as ScheduleOption | null;
   const paymentStatus = formData.get("paymentStatus") as PaymentStatus;
+  const discountType = (formData.get("discountType") as DiscountType) || "none";
   const notes = formData.get("notes") as string;
 
   if (!name || !email || !pkg || !paymentStatus) {
     return { success: false, message: "Name, email, package, and payment status are required." };
   }
+
+  const discountPercent = getDiscountPercent(discountType, pkg);
+  const originalAmount = packagePrices[pkg];
+  const finalAmount = Math.round(originalAmount * (1 - discountPercent / 100));
 
   try {
     await connectDB();
@@ -180,6 +262,10 @@ export async function updateAttendee(
         packageLabel: packageLabels[pkg],
         selectedSchedule: pkg === "3lectures" ? selectedSchedule : null,
         paymentStatus,
+        discountType,
+        discountPercent,
+        originalAmount,
+        finalAmount,
         notes: (notes || "").trim(),
       },
       { new: true }

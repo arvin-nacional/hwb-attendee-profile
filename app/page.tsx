@@ -4,27 +4,21 @@ import { useState, useCallback, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { QRCodeSVG } from "qrcode.react";
 import {
-  FaMonument,
-  FaUserShield,
-  FaSearch,
-  FaQrcode,
   FaCheckCircle,
   FaTimesCircle,
   FaCheck,
   FaTimes,
   FaKey,
-  FaStickyNote,
   FaUserSlash,
   FaTicketAlt,
   FaStarHalfAlt,
   FaStar,
   FaCrown,
   FaExclamationCircle,
-  FaCog,
+  FaCalendarAlt,
 } from "react-icons/fa";
-import { getAttendee } from "@/lib/actions";
-import { events, paymentStatusLabels, scheduleOptions, getAccessibleEventIds, type Attendee, type AttendeePackage, type PaymentStatus } from "@/lib/data";
-import Link from "next/link";
+import { getAttendeeByToken } from "@/lib/actions";
+import { events, paymentStatusLabels, discountTypeLabels, scheduleOptions, getAccessibleEventIds, type Attendee, type AttendeePackage, type PaymentStatus, type DiscountType } from "@/lib/data";
 
 const badgeConfig: Record<
   AttendeePackage,
@@ -50,37 +44,35 @@ const badgeConfig: Record<
   },
 };
 
-function EmptyState() {
+function WelcomeState() {
   return (
-    <div className="text-center py-20 px-10 text-[var(--gray)]">
-      <FaQrcode className="text-6xl text-[#ddd] mx-auto mb-6" />
-      <h2 className="font-[family-name:var(--font-playfair)] text-2xl text-[#999] mb-2.5">
-        Scan or Enter Attendee ID
+    <div className="text-center py-20 px-10">
+      <FaCalendarAlt className="text-6xl text-[var(--maroon)] mx-auto mb-6 opacity-30" />
+      <h2 className="font-[family-name:var(--font-playfair)] text-2xl text-[var(--maroon)] mb-3">
+        Welcome to HWB 2026
       </h2>
-      <p className="text-base">
-        Scan an attendee&apos;s QR code or type their ID above to view their
-        profile and access permissions.
+      <p className="text-base text-[var(--gray)] max-w-md mx-auto leading-relaxed">
+        To view your attendee profile and event access, please use the link or QR code provided in your registration confirmation email.
       </p>
     </div>
   );
 }
 
-function NotFoundState({ id }: { id: string }) {
+function NotFoundState() {
   return (
     <>
       <div className="rounded-xl px-7 py-5 flex items-center gap-4 mb-6 font-semibold text-lg bg-[var(--red-bg)] text-[var(--red)] border-2 border-red-200">
         <FaTimesCircle className="text-xl flex-shrink-0" />
-        Attendee Not Found — ID &quot;{id}&quot; does not match any
-        registration.
+        Invalid or expired link. Please use the link from your confirmation email.
       </div>
       <div className="text-center py-20 px-10 text-[var(--gray)]">
         <FaUserSlash className="text-6xl text-[#ddd] mx-auto mb-6" />
         <h2 className="font-[family-name:var(--font-playfair)] text-2xl text-[#999] mb-2.5">
-          No Record Found
+          Profile Not Found
         </h2>
         <p className="text-base">
-          Please verify the ID and try again, or check the attendee&apos;s
-          confirmation email.
+          The link you used may be invalid or expired. Please check your
+          registration confirmation email for the correct link.
         </p>
       </div>
     </>
@@ -90,26 +82,20 @@ function NotFoundState({ id }: { id: string }) {
 function AttendeeProfile({
   attendee,
   attendeeId,
+  token,
 }: {
   attendee: Attendee;
   attendeeId: string;
+  token: string;
 }) {
   const initials = attendee.name
     .split(" ")
     .map((n) => n[0])
     .join("");
   const accessibleIds = getAccessibleEventIds(attendee);
-  const accessCount = accessibleIds.length;
 
   return (
     <>
-      {/* Status Banner */}
-      <div className="rounded-xl px-7 py-5 flex items-center gap-4 mb-8 font-semibold text-lg bg-[var(--green-bg)] text-[var(--green)] border-2 border-green-200">
-        <FaCheckCircle className="text-xl flex-shrink-0" />
-        Verified Attendee — {attendee.packageLabel} · {accessCount} of{" "}
-        {events.length} events accessible
-      </div>
-
       {/* Profile Card */}
       <div className="bg-white rounded-2xl overflow-hidden shadow-[0_4px_20px_rgba(0,0,0,0.08)] mb-8">
         {/* Header */}
@@ -177,6 +163,22 @@ function AttendeeProfile({
               odd={false}
             />
           )}
+          <DetailItem
+            label="Amount"
+            value={
+              attendee.discountPercent > 0 ? (
+                <span className="flex items-center gap-2 flex-wrap">
+                  <span className="line-through text-[var(--gray)]">₱{attendee.originalAmount.toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span>
+                  <span className="text-[var(--maroon)] font-bold">₱{attendee.finalAmount.toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span>
+                  <span className="text-xs bg-[var(--green-bg)] text-[var(--green)] px-2 py-0.5 rounded-full font-bold">
+                    {attendee.discountPercent}% OFF — {discountTypeLabels[attendee.discountType as DiscountType] || attendee.discountType}
+                  </span>
+                </span>
+              ) : (
+                <span className="font-semibold">₱{attendee.originalAmount.toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span>
+              )
+            }
+          />
         </div>
       </div>
 
@@ -235,7 +237,7 @@ function AttendeeProfile({
       <div className="bg-white rounded-2xl overflow-hidden shadow-[0_4px_20px_rgba(0,0,0,0.08)] mb-8 p-10 flex items-center gap-10 max-sm:flex-col max-sm:text-center">
         <div className="bg-white p-4 border-2 border-[#e5e7eb] rounded-xl flex-shrink-0">
           <QRCodeSVG
-            value={attendeeId}
+            value={`${typeof window !== "undefined" ? window.location.origin : ""}/?id=${encodeURIComponent(token)}`}
             size={140}
             fgColor="#651E1F"
             bgColor="#ffffff"
@@ -244,32 +246,16 @@ function AttendeeProfile({
         </div>
         <div>
           <h3 className="font-[family-name:var(--font-playfair)] text-xl text-[var(--maroon)] mb-2">
-            Attendee QR Code
+            Your QR Code
           </h3>
           <p className="text-sm text-[var(--gray)] leading-relaxed mb-4">
-            This QR code contains the attendee&apos;s unique ID. Scan it at any
-            event check-in point to verify access.
+            Present this QR code at any event check-in point to verify your access.
           </p>
           <span className="font-mono text-sm bg-[var(--gray-light)] px-3.5 py-2 rounded-md text-gray-700 inline-block">
             {attendeeId}
           </span>
         </div>
       </div>
-
-      {/* Staff Notes */}
-      {attendee.notes && (
-        <div className="bg-[var(--cream-light)] border-2 border-[var(--cream)] rounded-2xl px-10 py-8 mb-8">
-          <h3 className="text-sm text-[var(--maroon)] font-bold mb-3 flex items-center gap-2">
-            <FaStickyNote />
-            Staff Notes
-          </h3>
-          <ul className="text-sm text-[#5c4e4d] leading-relaxed list-none">
-            <li className="before:content-['•'] before:text-[var(--maroon)] before:mr-2.5 before:font-bold">
-              {attendee.notes}
-            </li>
-          </ul>
-        </div>
-      )}
     </>
   );
 }
@@ -297,103 +283,64 @@ function DetailItem({
 
 export default function Home() {
   const searchParams = useSearchParams();
-  const [searchInput, setSearchInput] = useState("");
-  const [searchedId, setSearchedId] = useState<string | null>(null);
+  const [attendeeId, setAttendeeId] = useState<string | null>(null);
+  const [token, setToken] = useState<string | null>(null);
   const [foundAttendee, setFoundAttendee] = useState<Attendee | null>(null);
-  const [hasSearched, setHasSearched] = useState(false);
-  const [searching, setSearching] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [hasToken, setHasToken] = useState(false);
 
-  const lookupAttendee = useCallback(async (id: string) => {
-    const normalized = id.trim().toUpperCase();
-    if (!normalized) return;
-    setSearchInput(normalized);
-    setSearching(true);
+  const lookupByToken = useCallback(async (t: string) => {
+    setLoading(true);
     try {
-      const attendee = await getAttendee(normalized);
-      setSearchedId(normalized);
-      setFoundAttendee(attendee);
-      setHasSearched(true);
+      const result = await getAttendeeByToken(t);
+      if (result) {
+        setAttendeeId(result.id);
+        setToken(t);
+        setFoundAttendee(result.attendee);
+      } else {
+        setFoundAttendee(null);
+      }
     } finally {
-      setSearching(false);
+      setLoading(false);
     }
   }, []);
 
   useEffect(() => {
     const idParam = searchParams.get("id");
     if (idParam) {
-      lookupAttendee(idParam);
+      setHasToken(true);
+      lookupByToken(idParam);
+    } else {
+      setHasToken(false);
+      setLoading(false);
     }
-  }, [searchParams, lookupAttendee]);
-
-  const handleSearch = async () => {
-    await lookupAttendee(searchInput);
-  };
-
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter") handleSearch();
-  };
+  }, [searchParams, lookupByToken]);
 
   return (
     <>
       {/* Top Navigation */}
-      <div className="nav-bar bg-[var(--maroon)] px-6 py-4 flex items-center justify-between text-white sticky top-0 z-50 shadow-[0_2px_10px_rgba(0,0,0,0.2)]">
-        <div className="flex items-center gap-3">
-          <FaMonument className="text-2xl text-[var(--gold)]" />
-          <div>
-            <h1 className="font-[family-name:var(--font-playfair)] text-xl font-bold">
-              Heritage Without Borders 2026
-            </h1>
-            <span className="text-xs opacity-80 font-light">
-              Attendee Verification System
-            </span>
-          </div>
-        </div>
-        <div className="flex items-center gap-3">
-          <Link
-            href="/admin"
-            className="bg-white/10 border border-white/20 px-4 py-1.5 rounded-full text-sm flex items-center gap-2 hover:bg-white/20 transition-colors no-underline text-white"
-          >
-            <FaCog />
-            Admin
-          </Link>
-          <div className="bg-white/15 border border-white/20 px-4 py-1.5 rounded-full text-sm flex items-center gap-2">
-            <FaUserShield className="text-[var(--gold)]" />
-            Staff Portal
-          </div>
-        </div>
-      </div>
-
-      {/* Scanner Input */}
-      <div className="scanner-section bg-white border-b border-gray-200 px-6 py-6">
-        <div className="max-w-[800px] mx-auto flex items-center gap-4">
-          <input
-            type="text"
-            value={searchInput}
-            onChange={(e) => setSearchInput(e.target.value)}
-            onKeyDown={handleKeyPress}
-            placeholder="Scan QR code or enter Attendee ID (e.g. HWB-2026-0042)"
-            className="flex-1 px-5 py-3.5 border-2 border-gray-200 rounded-xl text-base font-[family-name:var(--font-inter)] outline-none focus:border-[var(--maroon)] transition-colors placeholder:text-[#aaa]"
-            autoFocus
-          />
-          <button
-            onClick={handleSearch}
-            disabled={searching}
-            className="bg-[var(--maroon)] text-white border-none px-7 py-3.5 rounded-xl text-base font-semibold cursor-pointer flex items-center gap-2 hover:bg-[var(--maroon-dark)] transition-colors font-[family-name:var(--font-inter)] disabled:opacity-50"
-          >
-            <FaSearch />
-            {searching ? "Searching..." : "Lookup"}
-          </button>
+      <div className="nav-bar bg-[var(--maroon)] px-6 py-4 flex items-center justify-center text-white sticky top-0 z-50 shadow-[0_2px_10px_rgba(0,0,0,0.2)]">
+        <div className="text-center">
+          <h1 className="font-[family-name:var(--font-playfair)] text-xl font-bold">
+            Heritage Without Borders 2026
+          </h1>
+          <span className="text-xs opacity-80 font-light">
+            Attendee Profile
+          </span>
         </div>
       </div>
 
       {/* Main Content */}
       <div className="w-full max-w-[900px] mx-auto my-10 px-6">
-        {!hasSearched && <EmptyState />}
-        {hasSearched && !foundAttendee && searchedId && (
-          <NotFoundState id={searchedId} />
+        {loading && (
+          <div className="text-center py-20 text-[var(--gray)]">
+            Loading your profile...
+          </div>
         )}
-        {hasSearched && foundAttendee && searchedId && (
-          <AttendeeProfile attendee={foundAttendee} attendeeId={searchedId} />
+        {!loading && !hasToken && <WelcomeState />}
+        {!loading && hasToken && !foundAttendee && <NotFoundState />}
+        {!loading && foundAttendee && attendeeId && token && (
+          <AttendeeProfile attendee={foundAttendee} attendeeId={attendeeId} token={token} />
         )}
       </div>
     </>

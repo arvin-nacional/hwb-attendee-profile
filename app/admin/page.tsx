@@ -15,21 +15,29 @@ import {
   FaTicketAlt,
   FaArrowLeft,
   FaLock,
-  FaMoneyCheckAlt,
+  FaEdit,
+  FaTimes,
 } from "react-icons/fa";
 import {
   addAttendee,
   getAllAttendees,
   deleteAttendee,
   updateAttendee,
-  verifyAdmin,
+  createAdminSession,
+  checkAdminSession,
+  clearAdminSession,
 } from "@/lib/actions";
 import {
   type Attendee,
   type AttendeePackage,
   type PaymentStatus,
+  type DiscountType,
   packageLabels,
+  packageShortNames,
+  packagePrices,
   paymentStatusLabels,
+  discountTypeLabels,
+  getDiscountPercent,
   scheduleOptions,
 } from "@/lib/data";
 import Link from "next/link";
@@ -43,20 +51,35 @@ const packageIcons: Record<AttendeePackage, React.ReactNode> = {
 
 export default function AdminPage() {
   const [authenticated, setAuthenticated] = useState(false);
+  const [sessionChecking, setSessionChecking] = useState(true);
   const [password, setPassword] = useState("");
   const [authError, setAuthError] = useState("");
   const [authLoading, setAuthLoading] = useState(false);
 
   const [attendeeList, setAttendeeList] = useState<
-    { id: string; attendee: Attendee }[]
+    { id: string; attendee: Attendee; token: string }[]
   >([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [selectedPackage, setSelectedPackage] = useState<string>("");
+  const [selectedDiscount, setSelectedDiscount] = useState<string>("none");
   const [message, setMessage] = useState<{
     type: "success" | "error";
     text: string;
   } | null>(null);
+
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    package: "" as string,
+    selectedSchedule: "" as string,
+    paymentStatus: "" as string,
+    discountType: "none" as string,
+    notes: "",
+  });
+  const [editSubmitting, setEditSubmitting] = useState(false);
 
   const fetchAttendees = useCallback(async () => {
     setLoading(true);
@@ -71,6 +94,13 @@ export default function AdminPage() {
   }, []);
 
   useEffect(() => {
+    checkAdminSession().then((valid) => {
+      if (valid) setAuthenticated(true);
+      setSessionChecking(false);
+    });
+  }, []);
+
+  useEffect(() => {
     if (authenticated) {
       fetchAttendees();
     }
@@ -81,7 +111,7 @@ export default function AdminPage() {
     setAuthLoading(true);
     setAuthError("");
     try {
-      const valid = await verifyAdmin(password);
+      const valid = await createAdminSession(password);
       if (valid) {
         setAuthenticated(true);
       } else {
@@ -93,6 +123,11 @@ export default function AdminPage() {
     } finally {
       setAuthLoading(false);
     }
+  }
+
+  async function handleLogout() {
+    await clearAdminSession();
+    setAuthenticated(false);
   }
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -112,6 +147,7 @@ export default function AdminPage() {
         });
         form.reset();
         setSelectedPackage("");
+        setSelectedDiscount("none");
         fetchAttendees();
       } else {
         setMessage({ type: "error", text: result.message });
@@ -123,30 +159,49 @@ export default function AdminPage() {
     }
   }
 
-  async function handleMarkPaid(id: string, attendee: Attendee) {
-    if (!confirm(`Mark ${attendee.name} (${id}) as Fully Paid?`)) return;
+  function openEditModal(id: string, attendee: Attendee) {
+    setEditingId(id);
+    setEditForm({
+      name: attendee.name,
+      email: attendee.email,
+      phone: attendee.phone,
+      package: attendee.package,
+      selectedSchedule: attendee.selectedSchedule || "",
+      paymentStatus: attendee.paymentStatus,
+      discountType: attendee.discountType || "none",
+      notes: attendee.notes,
+    });
+  }
 
+  async function handleEditSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!editingId) return;
+    setEditSubmitting(true);
     try {
       const formData = new FormData();
-      formData.set("name", attendee.name);
-      formData.set("email", attendee.email);
-      formData.set("phone", attendee.phone);
-      formData.set("package", attendee.package);
-      if (attendee.selectedSchedule) {
-        formData.set("selectedSchedule", attendee.selectedSchedule);
+      formData.set("name", editForm.name);
+      formData.set("email", editForm.email);
+      formData.set("phone", editForm.phone);
+      formData.set("package", editForm.package);
+      if (editForm.package === "3lectures" && editForm.selectedSchedule) {
+        formData.set("selectedSchedule", editForm.selectedSchedule);
       }
-      formData.set("paymentStatus", "fully_paid");
-      formData.set("notes", attendee.notes);
+      formData.set("paymentStatus", editForm.paymentStatus);
+      formData.set("discountType", editForm.discountType);
+      formData.set("notes", editForm.notes);
 
-      const result = await updateAttendee(id, formData);
+      const result = await updateAttendee(editingId, formData);
       if (result.success) {
-        setMessage({ type: "success", text: `${attendee.name} marked as Fully Paid.` });
+        setMessage({ type: "success", text: `${editForm.name} updated successfully.` });
+        setEditingId(null);
         fetchAttendees();
       } else {
         setMessage({ type: "error", text: result.message });
       }
     } catch {
-      setMessage({ type: "error", text: "Failed to update payment status." });
+      setMessage({ type: "error", text: "Failed to update attendee." });
+    } finally {
+      setEditSubmitting(false);
     }
   }
 
@@ -164,6 +219,14 @@ export default function AdminPage() {
     } catch {
       setMessage({ type: "error", text: "Failed to delete." });
     }
+  }
+
+  if (sessionChecking) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-[var(--gray)] text-sm">Loading...</div>
+      </div>
+    );
   }
 
   if (!authenticated) {
@@ -260,10 +323,14 @@ export default function AdminPage() {
             <FaArrowLeft />
             Lookup
           </Link>
-          <div className="bg-white/15 border border-white/20 px-4 py-1.5 rounded-full text-sm flex items-center gap-2">
+          <button
+            onClick={handleLogout}
+            className="bg-white/15 border border-white/20 px-4 py-1.5 rounded-full text-sm flex items-center gap-2 hover:bg-white/25 transition-colors cursor-pointer"
+            title="Logout"
+          >
             <FaUserShield className="text-[var(--gold)]" />
-            Admin
-          </div>
+            Logout
+          </button>
         </div>
       </div>
 
@@ -416,6 +483,51 @@ export default function AdminPage() {
                 </select>
               </div>
 
+              {/* Discount Type */}
+              <div>
+                <label className="block text-xs text-[var(--gray)] uppercase tracking-[1px] mb-2 font-semibold">
+                  Discount
+                </label>
+                <select
+                  name="discountType"
+                  value={selectedDiscount}
+                  onChange={(e) => setSelectedDiscount(e.target.value)}
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl text-base outline-none focus:border-[var(--maroon)] transition-colors bg-white"
+                >
+                  {(Object.entries(discountTypeLabels) as [DiscountType, string][]).map(([value, label]) => (
+                    <option key={value} value={value}>{label}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Price Preview */}
+              {selectedPackage && (() => {
+                const pct = getDiscountPercent(selectedDiscount as DiscountType, selectedPackage as AttendeePackage);
+                const original = packagePrices[selectedPackage as AttendeePackage];
+                const final = Math.round(original * (1 - pct / 100));
+                return (
+                  <div className="col-span-2 max-sm:col-span-1 bg-[var(--cream-light)] border-2 border-[var(--cream)] rounded-xl px-6 py-4">
+                    <div className="text-xs text-[var(--gray)] uppercase tracking-[1px] mb-2 font-semibold">
+                      Payment Summary
+                    </div>
+                    <div className="flex items-center justify-between text-sm text-gray-700 mb-1">
+                      <span>Original Price</span>
+                      <span>₱{original.toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span>
+                    </div>
+                    {pct > 0 && (
+                      <div className="flex items-center justify-between text-sm text-[var(--green)] mb-1">
+                        <span>Discount ({pct}%)</span>
+                        <span>-₱{(original * pct / 100).toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span>
+                      </div>
+                    )}
+                    <div className="flex items-center justify-between text-base font-bold text-[var(--maroon)] border-t border-[var(--cream)] pt-2 mt-2">
+                      <span>Total</span>
+                      <span>₱{final.toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span>
+                    </div>
+                  </div>
+                );
+              })()}
+
               {/* Notes */}
               <div className="col-span-2 max-sm:col-span-1">
                 <label className="block text-xs text-[var(--gray)] uppercase tracking-[1px] mb-2 font-semibold">
@@ -467,14 +579,14 @@ export default function AdminPage() {
             </div>
           ) : (
             <div>
-              {attendeeList.map(({ id, attendee }) => (
+              {attendeeList.map(({ id, attendee, token }) => (
                 <div
                   key={id}
                   className="flex items-center px-10 py-5 border-b border-[#f5f5f5] last:border-b-0 hover:bg-[#fafafa] transition-colors gap-4"
                 >
                   {/* Clickable area linking to profile */}
                   <Link
-                    href={`/?id=${encodeURIComponent(id)}`}
+                    href={`/?id=${encodeURIComponent(token)}`}
                     className="flex items-center gap-4 flex-1 min-w-0 no-underline"
                   >
                     {/* Avatar */}
@@ -499,24 +611,28 @@ export default function AdminPage() {
                   {/* Package Badge */}
                   <div className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-[var(--cream)] text-[var(--maroon)] flex-shrink-0">
                     {packageIcons[attendee.package]}
-                    {attendee.packageLabel}
+                    {packageShortNames[attendee.package]}
                   </div>
 
                   {/* Payment Status */}
-                  {attendee.paymentStatus === "fully_paid" ? (
-                    <div className="px-3 py-1 rounded-full text-xs font-bold flex-shrink-0 bg-[var(--green-bg)] text-[var(--green)]">
-                      {paymentStatusLabels[attendee.paymentStatus]}
-                    </div>
-                  ) : (
-                    <button
-                      onClick={() => handleMarkPaid(id, attendee)}
-                      className="px-3 py-1 rounded-full text-xs font-bold flex-shrink-0 bg-amber-50 text-amber-600 border border-amber-200 cursor-pointer hover:bg-green-50 hover:text-[var(--green)] hover:border-green-200 transition-colors flex items-center gap-1.5"
-                      title="Click to mark as Fully Paid"
-                    >
-                      <FaMoneyCheckAlt />
-                      {paymentStatusLabels[attendee.paymentStatus]}
-                    </button>
-                  )}
+                  <div
+                    className={`px-3 py-1 rounded-full text-xs font-bold flex-shrink-0 ${
+                      attendee.paymentStatus === "fully_paid"
+                        ? "bg-[var(--green-bg)] text-[var(--green)]"
+                        : "bg-amber-50 text-amber-600"
+                    }`}
+                  >
+                    {paymentStatusLabels[attendee.paymentStatus]}
+                  </div>
+
+                  {/* Edit */}
+                  <button
+                    onClick={() => openEditModal(id, attendee)}
+                    className="text-gray-300 hover:text-[var(--maroon)] transition-colors p-2 flex-shrink-0 cursor-pointer"
+                    title="Edit attendee"
+                  >
+                    <FaEdit />
+                  </button>
 
                   {/* Delete */}
                   <button
@@ -532,6 +648,227 @@ export default function AdminPage() {
           )}
         </div>
       </div>
+
+      {/* Edit Modal */}
+      {editingId && (
+        <div className="fixed inset-0 bg-black/40 z-[100] flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+            <div className="px-8 py-6 border-b border-[#f0f0f0] flex items-center justify-between">
+              <div>
+                <h2 className="font-[family-name:var(--font-playfair)] text-xl text-[var(--maroon)] font-bold">
+                  Edit Attendee
+                </h2>
+                <span className="text-xs text-[var(--gray)]">{editingId}</span>
+              </div>
+              <button
+                onClick={() => setEditingId(null)}
+                className="text-gray-400 hover:text-gray-600 transition-colors cursor-pointer p-1"
+              >
+                <FaTimes className="text-lg" />
+              </button>
+            </div>
+
+            <form onSubmit={handleEditSubmit} className="p-8">
+              <div className="grid grid-cols-2 gap-5 max-sm:grid-cols-1">
+                {/* Name */}
+                <div className="col-span-2 max-sm:col-span-1">
+                  <label className="block text-xs text-[var(--gray)] uppercase tracking-[1px] mb-2 font-semibold">
+                    Full Name *
+                  </label>
+                  <input
+                    type="text"
+                    value={editForm.name}
+                    onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                    required
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl text-base outline-none focus:border-[var(--maroon)] transition-colors"
+                  />
+                </div>
+
+                {/* Email */}
+                <div>
+                  <label className="block text-xs text-[var(--gray)] uppercase tracking-[1px] mb-2 font-semibold">
+                    Email *
+                  </label>
+                  <input
+                    type="email"
+                    value={editForm.email}
+                    onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
+                    required
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl text-base outline-none focus:border-[var(--maroon)] transition-colors"
+                  />
+                </div>
+
+                {/* Phone */}
+                <div>
+                  <label className="block text-xs text-[var(--gray)] uppercase tracking-[1px] mb-2 font-semibold">
+                    Phone
+                  </label>
+                  <input
+                    type="text"
+                    value={editForm.phone}
+                    onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl text-base outline-none focus:border-[var(--maroon)] transition-colors"
+                  />
+                </div>
+
+                {/* Package */}
+                <div>
+                  <label className="block text-xs text-[var(--gray)] uppercase tracking-[1px] mb-2 font-semibold">
+                    Package *
+                  </label>
+                  <select
+                    value={editForm.package}
+                    onChange={(e) => setEditForm({ ...editForm, package: e.target.value, selectedSchedule: e.target.value !== "3lectures" ? "" : editForm.selectedSchedule })}
+                    required
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl text-base outline-none focus:border-[var(--maroon)] transition-colors bg-white"
+                  >
+                    <option value="">Select package...</option>
+                    {(
+                      Object.entries(packageLabels) as [
+                        AttendeePackage,
+                        string,
+                      ][]
+                    ).map(([value, label]) => (
+                      <option key={value} value={value}>
+                        {label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Schedule Picker */}
+                {editForm.package === "3lectures" && (
+                  <div className="col-span-2 max-sm:col-span-1">
+                    <label className="block text-xs text-[var(--maroon)] uppercase tracking-[1px] mb-3 font-semibold">
+                      For Package B — Select Desired Schedule *
+                    </label>
+                    <div className="space-y-2">
+                      {scheduleOptions.map((option) => (
+                        <label
+                          key={option.value}
+                          className="flex items-center gap-3 px-4 py-3 border-2 border-gray-200 rounded-xl cursor-pointer hover:border-[var(--maroon-light)] transition-colors has-[:checked]:border-[var(--maroon)] has-[:checked]:bg-[var(--cream-light)]"
+                        >
+                          <input
+                            type="radio"
+                            name="editSelectedSchedule"
+                            value={option.value}
+                            checked={editForm.selectedSchedule === option.value}
+                            onChange={(e) => setEditForm({ ...editForm, selectedSchedule: e.target.value })}
+                            required
+                            className="accent-[var(--maroon)] w-4 h-4"
+                          />
+                          <span className="text-base text-gray-800 font-medium">
+                            {option.label}
+                          </span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Payment Status */}
+                <div>
+                  <label className="block text-xs text-[var(--gray)] uppercase tracking-[1px] mb-2 font-semibold">
+                    Payment Status *
+                  </label>
+                  <select
+                    value={editForm.paymentStatus}
+                    onChange={(e) => setEditForm({ ...editForm, paymentStatus: e.target.value })}
+                    required
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl text-base outline-none focus:border-[var(--maroon)] transition-colors bg-white"
+                  >
+                    <option value="">Select status...</option>
+                    {(
+                      Object.entries(paymentStatusLabels) as [
+                        PaymentStatus,
+                        string,
+                      ][]
+                    ).map(([value, label]) => (
+                      <option key={value} value={value}>
+                        {label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Discount Type */}
+                <div>
+                  <label className="block text-xs text-[var(--gray)] uppercase tracking-[1px] mb-2 font-semibold">
+                    Discount
+                  </label>
+                  <select
+                    value={editForm.discountType}
+                    onChange={(e) => setEditForm({ ...editForm, discountType: e.target.value })}
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl text-base outline-none focus:border-[var(--maroon)] transition-colors bg-white"
+                  >
+                    {(Object.entries(discountTypeLabels) as [DiscountType, string][]).map(([value, label]) => (
+                      <option key={value} value={value}>{label}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Price Preview */}
+                {editForm.package && (() => {
+                  const pct = getDiscountPercent(editForm.discountType as DiscountType, editForm.package as AttendeePackage);
+                  const original = packagePrices[editForm.package as AttendeePackage];
+                  const finalAmt = Math.round(original * (1 - pct / 100));
+                  return (
+                    <div className="col-span-2 max-sm:col-span-1 bg-[var(--cream-light)] border-2 border-[var(--cream)] rounded-xl px-6 py-4">
+                      <div className="text-xs text-[var(--gray)] uppercase tracking-[1px] mb-2 font-semibold">
+                        Payment Summary
+                      </div>
+                      <div className="flex items-center justify-between text-sm text-gray-700 mb-1">
+                        <span>Original Price</span>
+                        <span>₱{original.toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span>
+                      </div>
+                      {pct > 0 && (
+                        <div className="flex items-center justify-between text-sm text-[var(--green)] mb-1">
+                          <span>Discount ({pct}%)</span>
+                          <span>-₱{(original * pct / 100).toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span>
+                        </div>
+                      )}
+                      <div className="flex items-center justify-between text-base font-bold text-[var(--maroon)] border-t border-[var(--cream)] pt-2 mt-2">
+                        <span>Total</span>
+                        <span>₱{finalAmt.toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span>
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                {/* Notes */}
+                <div className="col-span-2 max-sm:col-span-1">
+                  <label className="block text-xs text-[var(--gray)] uppercase tracking-[1px] mb-2 font-semibold">
+                    Staff Notes
+                  </label>
+                  <textarea
+                    value={editForm.notes}
+                    onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })}
+                    rows={3}
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl text-base outline-none focus:border-[var(--maroon)] transition-colors resize-y"
+                  />
+                </div>
+              </div>
+
+              <div className="mt-6 flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setEditingId(null)}
+                  className="px-6 py-3 rounded-xl text-base font-semibold cursor-pointer border-2 border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={editSubmitting}
+                  className="bg-[var(--maroon)] text-white px-8 py-3 rounded-xl text-base font-semibold cursor-pointer flex items-center gap-2 hover:bg-[var(--maroon-dark)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {editSubmitting ? "Saving..." : "Save Changes"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </>
   );
 }

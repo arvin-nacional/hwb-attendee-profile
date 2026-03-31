@@ -1,5 +1,5 @@
 import mongoose, { Schema, Document } from "mongoose";
-import type { AttendeePackage, PaymentStatus, ScheduleOption } from "@/lib/data";
+import type { AttendeePackage, PaymentStatus, ScheduleOption, DiscountType } from "@/lib/data";
 
 export interface IAttendee extends Document {
   attendeeId: string;
@@ -11,6 +11,10 @@ export interface IAttendee extends Document {
   packageLabel: string;
   registrationDate: string;
   paymentStatus: PaymentStatus;
+  discountType: DiscountType;
+  discountPercent: number;
+  originalAmount: number;
+  finalAmount: number;
   notes: string;
 }
 
@@ -33,6 +37,14 @@ const AttendeeSchema = new Schema<IAttendee>(
       required: true,
       enum: ["fully_paid", "downpayment_50"],
     },
+    discountType: {
+      type: String,
+      default: "none",
+      enum: ["none", "senior_pwd_student", "bulk_5", "bulk_10"],
+    },
+    discountPercent: { type: Number, default: 0 },
+    originalAmount: { type: Number, default: 0 },
+    finalAmount: { type: Number, default: 0 },
     notes: { type: String, default: "" },
   },
   { timestamps: true }

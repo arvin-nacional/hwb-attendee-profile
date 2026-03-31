@@ -7,6 +7,10 @@ export interface Attendee {
   selectedSchedule: ScheduleOption | null;
   registrationDate: string;
   paymentStatus: PaymentStatus;
+  discountType: DiscountType;
+  discountPercent: number;
+  originalAmount: number;
+  finalAmount: number;
   notes: string;
 }
 
@@ -24,6 +28,47 @@ export const packageLabels: Record<AttendeePackage, string> = {
   "5lectures": "HWB Package C (Conference and 5 Lectures) - ₱5,000.00",
   full: "HWB Full Package (Conference, 5 Lectures and Workshop) - ₱35,000.00",
 };
+
+export const packageShortNames: Record<AttendeePackage, string> = {
+  conference: "Package A",
+  "3lectures": "Package B",
+  "5lectures": "Package C",
+  full: "Full Package",
+};
+
+export const packagePrices: Record<AttendeePackage, number> = {
+  conference: 3000,
+  "3lectures": 4500,
+  "5lectures": 5000,
+  full: 35000,
+};
+
+export type DiscountType = "none" | "senior_pwd_student" | "bulk_5" | "bulk_10";
+
+export const discountTypeLabels: Record<DiscountType, string> = {
+  none: "No Discount",
+  senior_pwd_student: "Senior / PWD / Student",
+  bulk_5: "Bulk (5-9 participants)",
+  bulk_10: "Bulk (10+ participants)",
+};
+
+export function getDiscountPercent(
+  discountType: DiscountType,
+  pkg: AttendeePackage
+): number {
+  if (discountType === "none") return 0;
+  if (pkg === "full") return 5;
+  switch (discountType) {
+    case "senior_pwd_student":
+      return 20;
+    case "bulk_5":
+      return 10;
+    case "bulk_10":
+      return 15;
+    default:
+      return 0;
+  }
+}
 
 export type ScheduleOption = "1,2,5" | "1,3,5" | "1,4,5" | "2,3,5" | "2,4,5" | "3,4,5";
 
@@ -74,6 +119,10 @@ export const attendees: Record<string, Attendee> = {
     packageLabel: "HWB Full Package (Conference, 5 Lectures and Workshop) - ₱35,000.00",
     registrationDate: "2026-01-15",
     paymentStatus: "fully_paid",
+    discountType: "none",
+    discountPercent: 0,
+    originalAmount: 35000,
+    finalAmount: 35000,
     notes: "VIP Guest — Senior Conservator",
   },
   "HWB-2026-0042": {
@@ -85,6 +134,10 @@ export const attendees: Record<string, Attendee> = {
     packageLabel: "HWB Package C (Conference and 5 Lectures) - ₱5,000.00",
     registrationDate: "2026-02-20",
     paymentStatus: "fully_paid",
+    discountType: "none",
+    discountPercent: 0,
+    originalAmount: 5000,
+    finalAmount: 5000,
     notes: "",
   },
   "HWB-2026-0078": {
@@ -96,6 +149,10 @@ export const attendees: Record<string, Attendee> = {
     packageLabel: "HWB Package B (Conference and Choice of 3 Lectures) - ₱4,500.00",
     registrationDate: "2026-03-01",
     paymentStatus: "downpayment_50",
+    discountType: "bulk_10",
+    discountPercent: 15,
+    originalAmount: 4500,
+    finalAmount: 3825,
     notes: "Group registration — Heritage Conservation Society (10 pax)",
   },
   "HWB-2026-0150": {
@@ -107,6 +164,10 @@ export const attendees: Record<string, Attendee> = {
     packageLabel: "HWB Package A Conference Only - ₱3,000.00",
     registrationDate: "2026-03-10",
     paymentStatus: "downpayment_50",
+    discountType: "senior_pwd_student",
+    discountPercent: 20,
+    originalAmount: 3000,
+    finalAmount: 2400,
     notes: "Senior/PWD discount applied",
   },
 };
