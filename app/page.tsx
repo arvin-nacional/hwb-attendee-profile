@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { QRCodeSVG } from "qrcode.react";
 import {
@@ -281,7 +281,7 @@ function DetailItem({
   );
 }
 
-export default function Home() {
+function HomeContent() {
   const searchParams = useSearchParams();
   const [attendeeId, setAttendeeId] = useState<string | null>(null);
   const [token, setToken] = useState<string | null>(null);
@@ -344,5 +344,19 @@ export default function Home() {
         )}
       </div>
     </>
+  );
+}
+
+export default function Home() {
+  return (
+    <Suspense
+      fallback={
+        <div className="text-center py-20 text-[var(--gray)]">
+          Loading...
+        </div>
+      }
+    >
+      <HomeContent />
+    </Suspense>
   );
 }
