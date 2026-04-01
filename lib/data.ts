@@ -229,7 +229,7 @@ export const events: HWBEvent[] = [
   },
   {
     id: "workshop",
-    name: "15-Day Conservation Workshop",
+    name: "15-Session Conservation Workshop",
     meta: "Hands-on Training",
     venue: "TBA",
     date: "June 2026",
