@@ -124,10 +124,6 @@ function AttendeeProfile({
           <DetailItem label="Email" value={attendee.email} />
           <DetailItem label="Phone" value={attendee.phone} odd={false} />
           <DetailItem
-            label="Registration Date"
-            value={attendee.registrationDate}
-          />
-          <DetailItem
             label="Payment Status"
             value={
               attendee.paymentStatus === "fully_paid" ? (
