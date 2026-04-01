@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { FaMonument, FaArrowLeft, FaLock, FaSpinner } from "react-icons/fa";
 import Link from "next/link";
 import { checkAdminSession, createAdminSession } from "@/lib/actions";
-import { scanToken } from "@/lib/attendanceActions";
+import { scanToken, getExpectedCounts } from "@/lib/attendanceActions";
 import { type HWBEvent } from "@/lib/data";
 import { EventSelector } from "@/components/scan/EventSelector";
 import { CameraScanner } from "@/components/scan/CameraScanner";
@@ -24,12 +24,14 @@ export default function ScanPage() {
   const [scanning, setScanning] = useState(false);
   const [scanError, setScanError] = useState<string | null>(null);
   const [logRefresh, setLogRefresh] = useState(0);
+  const [expectedCounts, setExpectedCounts] = useState<Record<string, number>>({});
 
   useEffect(() => {
     checkAdminSession().then((valid) => {
       setAuthenticated(valid);
       setSessionChecking(false);
     });
+    getExpectedCounts().then(setExpectedCounts);
   }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -191,6 +193,7 @@ export default function ScanPage() {
                 eventId={selectedEvent.id}
                 eventName={selectedEvent.name}
                 refreshTrigger={logRefresh}
+                expectedCount={expectedCounts[selectedEvent.id]}
               />
             </div>
           </div>

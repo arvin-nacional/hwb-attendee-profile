@@ -9,9 +9,10 @@ interface Props {
   eventId: string;
   eventName: string;
   refreshTrigger?: number;
+  expectedCount?: number;
 }
 
-export function AttendanceLog({ eventId, eventName, refreshTrigger }: Props) {
+export function AttendanceLog({ eventId, eventName, refreshTrigger, expectedCount }: Props) {
   const [records, setRecords] = useState<AttendanceRecord[]>([]);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -44,7 +45,7 @@ export function AttendanceLog({ eventId, eventName, refreshTrigger }: Props) {
             Checked In — {eventName}
           </span>
           <span className="bg-[var(--maroon)] text-white text-xs font-bold px-2 py-0.5 rounded-full">
-            {records.length}
+            {records.length}{expectedCount !== undefined ? `/${expectedCount}` : ""}
           </span>
         </div>
         <button

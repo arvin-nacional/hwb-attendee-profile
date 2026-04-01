@@ -2,7 +2,7 @@
 
 import { connectDB } from "@/lib/mongodb";
 import { AttendanceModel } from "@/lib/models/Attendance";
-import { getAttendeeByToken } from "@/lib/actions";
+import { getAttendeeByToken, getAllAttendees } from "@/lib/actions";
 import { getAccessibleEventIds, type Attendee } from "@/lib/data";
 
 export interface AttendanceRecord {
@@ -90,6 +90,17 @@ export async function getEventAttendance(
     console.error("Failed to fetch attendance:", error);
     return [];
   }
+}
+
+export async function getExpectedCounts(): Promise<Record<string, number>> {
+  const attendees = await getAllAttendees();
+  const counts: Record<string, number> = {};
+  for (const { attendee } of attendees) {
+    for (const eventId of getAccessibleEventIds(attendee)) {
+      counts[eventId] = (counts[eventId] ?? 0) + 1;
+    }
+  }
+  return counts;
 }
 
 export async function removeAttendance(
