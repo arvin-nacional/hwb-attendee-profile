@@ -71,8 +71,8 @@ export async function encryptAttendeeId(id: string): Promise<string> {
 export async function getAttendeeByToken(
   token: string
 ): Promise<{ id: string; attendee: Attendee } | null> {
-  const id = decryptId(token);
-  if (!id) return null;
+  const decrypted = decryptId(token);
+  const id = decrypted || token.trim().toUpperCase();
   const attendee = await getAttendee(id);
   if (!attendee) return null;
   return { id, attendee };
