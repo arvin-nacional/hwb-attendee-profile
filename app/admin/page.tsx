@@ -15,6 +15,7 @@ import {
   FaTicketAlt,
   FaArrowLeft,
   FaQrcode,
+  FaSearch,
   FaLock,
   FaEdit,
   FaTimes,
@@ -304,40 +305,41 @@ export default function AdminPage() {
   return (
     <>
       {/* Top Navigation */}
-      <div className="bg-[var(--maroon)] px-6 py-4 flex items-center justify-between text-white sticky top-0 z-50 shadow-[0_2px_10px_rgba(0,0,0,0.2)]">
-        <div className="flex items-center gap-3">
-          <FaMonument className="text-2xl text-[var(--gold)]" />
-          <div>
-            <h1 className="font-[family-name:var(--font-playfair)] text-xl font-bold">
-              Heritage Without Borders 2026
+      <div className="bg-[var(--maroon)] px-4 sm:px-6 py-3 flex items-center justify-between text-white sticky top-0 z-50 shadow-[0_2px_10px_rgba(0,0,0,0.2)] gap-3">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <FaMonument className="text-lg text-[var(--gold)] flex-shrink-0" />
+          <div className="min-w-0">
+            <h1 className="font-[family-name:var(--font-playfair)] text-base font-bold leading-tight truncate">
+              <span className="hidden sm:inline">Heritage Without Borders 2026</span>
+              <span className="sm:hidden">HWB 2026</span>
             </h1>
-            <span className="text-xs opacity-80 font-light">
-              Admin — Attendee Management
-            </span>
+            <span className="text-xs opacity-70 font-light hidden sm:block">Admin — Attendee Management</span>
           </div>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 flex-shrink-0">
           <Link
             href="/scan"
-            className="bg-white/10 border border-white/20 px-4 py-1.5 rounded-full text-sm flex items-center gap-2 hover:bg-white/20 transition-colors no-underline text-white"
+            className="bg-white/10 border border-white/20 p-2 sm:px-4 sm:py-1.5 rounded-full text-sm flex items-center gap-2 hover:bg-white/20 transition-colors no-underline text-white"
+            title="Check-In"
           >
             <FaQrcode />
-            Check-In
+            <span className="hidden sm:inline">Check-In</span>
           </Link>
           <Link
-            href="/"
-            className="bg-white/10 border border-white/20 px-4 py-1.5 rounded-full text-sm flex items-center gap-2 hover:bg-white/20 transition-colors no-underline text-white"
+            href="/lookup"
+            className="bg-white/10 border border-white/20 p-2 sm:px-4 sm:py-1.5 rounded-full text-sm flex items-center gap-2 hover:bg-white/20 transition-colors no-underline text-white"
+            title="Lookup"
           >
-            <FaArrowLeft />
-            Lookup
+            <FaSearch />
+            <span className="hidden sm:inline">Lookup</span>
           </Link>
           <button
             onClick={handleLogout}
-            className="bg-white/15 border border-white/20 px-4 py-1.5 rounded-full text-sm flex items-center gap-2 hover:bg-white/25 transition-colors cursor-pointer"
+            className="bg-white/10 border border-white/20 p-2 sm:px-4 sm:py-1.5 rounded-full text-sm flex items-center gap-2 hover:bg-white/20 transition-colors cursor-pointer"
             title="Logout"
           >
             <FaUserShield className="text-[var(--gold)]" />
-            Logout
+            <span className="hidden sm:inline">Logout</span>
           </button>
         </div>
       </div>
@@ -590,66 +592,59 @@ export default function AdminPage() {
               {attendeeList.map(({ id, attendee, token }) => (
                 <div
                   key={id}
-                  className="flex items-center px-10 py-5 border-b border-[#f5f5f5] last:border-b-0 hover:bg-[#fafafa] transition-colors gap-4"
+                  className="flex items-center px-4 sm:px-8 py-4 border-b border-[#f5f5f5] last:border-b-0 hover:bg-[#fafafa] transition-colors gap-3"
                 >
-                  {/* Clickable area linking to profile */}
+                  {/* Avatar */}
                   <Link
                     href={`/?id=${encodeURIComponent(token)}`}
-                    className="flex items-center gap-4 flex-1 min-w-0 no-underline"
+                    className="w-10 h-10 bg-[var(--maroon)] text-white rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 font-[family-name:var(--font-playfair)] no-underline"
                   >
-                    {/* Avatar */}
-                    <div className="w-11 h-11 bg-[var(--maroon)] text-white rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 font-[family-name:var(--font-playfair)]">
-                      {attendee.name
-                        .split(" ")
-                        .map((n) => n[0])
-                        .join("")}
-                    </div>
+                    {attendee.name.split(" ").map((n) => n[0]).join("").slice(0, 2)}
+                  </Link>
 
-                    {/* Info */}
-                    <div className="flex-1 min-w-0">
-                      <div className="font-semibold text-gray-800 text-[0.95rem]">
-                        {attendee.name}
-                      </div>
-                      <div className="text-xs text-[var(--gray)] truncate">
-                        {id} · {attendee.email}
-                      </div>
+                  {/* Info — clickable */}
+                  <Link
+                    href={`/?id=${encodeURIComponent(token)}`}
+                    className="flex-1 min-w-0 no-underline"
+                  >
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-semibold text-gray-800 text-sm">{attendee.name}</span>
+                      <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-[var(--cream)] text-[var(--maroon)]">
+                        {packageIcons[attendee.package]}
+                        {packageShortNames[attendee.package]}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                      <span className="text-xs text-[var(--gray)] truncate max-w-[130px] sm:max-w-none">{id}</span>
+                      <span
+                        className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+                          attendee.paymentStatus === "fully_paid"
+                            ? "bg-[var(--green-bg)] text-[var(--green)]"
+                            : "bg-amber-50 text-amber-600"
+                        }`}
+                      >
+                        {paymentStatusLabels[attendee.paymentStatus]}
+                      </span>
                     </div>
                   </Link>
 
-                  {/* Package Badge */}
-                  <div className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-[var(--cream)] text-[var(--maroon)] flex-shrink-0">
-                    {packageIcons[attendee.package]}
-                    {packageShortNames[attendee.package]}
+                  {/* Actions */}
+                  <div className="flex items-center gap-1 flex-shrink-0">
+                    <button
+                      onClick={() => openEditModal(id, attendee)}
+                      className="text-gray-300 hover:text-[var(--maroon)] transition-colors p-2 cursor-pointer rounded-lg hover:bg-gray-50"
+                      title="Edit attendee"
+                    >
+                      <FaEdit className="text-sm" />
+                    </button>
+                    <button
+                      onClick={() => handleDelete(id, attendee.name)}
+                      className="text-gray-300 hover:text-[var(--red)] transition-colors p-2 cursor-pointer rounded-lg hover:bg-red-50"
+                      title="Delete attendee"
+                    >
+                      <FaTrash className="text-sm" />
+                    </button>
                   </div>
-
-                  {/* Payment Status */}
-                  <div
-                    className={`px-3 py-1 rounded-full text-xs font-bold flex-shrink-0 ${
-                      attendee.paymentStatus === "fully_paid"
-                        ? "bg-[var(--green-bg)] text-[var(--green)]"
-                        : "bg-amber-50 text-amber-600"
-                    }`}
-                  >
-                    {paymentStatusLabels[attendee.paymentStatus]}
-                  </div>
-
-                  {/* Edit */}
-                  <button
-                    onClick={() => openEditModal(id, attendee)}
-                    className="text-gray-300 hover:text-[var(--maroon)] transition-colors p-2 flex-shrink-0 cursor-pointer"
-                    title="Edit attendee"
-                  >
-                    <FaEdit />
-                  </button>
-
-                  {/* Delete */}
-                  <button
-                    onClick={() => handleDelete(id, attendee.name)}
-                    className="text-gray-300 hover:text-[var(--red)] transition-colors p-2 flex-shrink-0 cursor-pointer"
-                    title="Delete attendee"
-                  >
-                    <FaTrash />
-                  </button>
                 </div>
               ))}
             </div>

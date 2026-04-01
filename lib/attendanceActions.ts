@@ -14,6 +14,7 @@ export interface AttendanceRecord {
 export interface ScanResult {
   attendeeId: string;
   attendee: Attendee;
+  token: string;
   hasAccess: boolean;
   alreadyCheckedIn: boolean;
 }
@@ -42,7 +43,7 @@ export async function scanToken(
 
   return {
     success: true,
-    result: { attendeeId, attendee, hasAccess, alreadyCheckedIn },
+    result: { attendeeId, attendee, token, hasAccess, alreadyCheckedIn },
   };
 }
 

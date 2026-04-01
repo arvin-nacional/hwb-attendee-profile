@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import {
   FaCheckCircle,
   FaTimesCircle,
@@ -11,6 +12,7 @@ import {
   FaStarHalfAlt,
   FaStar,
   FaCrown,
+  FaExternalLinkAlt,
 } from "react-icons/fa";
 import { recordAttendance } from "@/lib/attendanceActions";
 import { packageShortNames, type AttendeePackage } from "@/lib/data";
@@ -75,19 +77,24 @@ export function ScanResult({ result, eventName, eventId, onReset, onCheckedIn }:
       </div>
 
       {/* Attendee Info */}
-      <div className="px-6 py-5 flex items-center gap-4 border-b border-gray-100">
-        <div className="w-14 h-14 rounded-full bg-[var(--maroon)] text-white flex items-center justify-center text-xl font-bold font-[family-name:var(--font-playfair)] flex-shrink-0">
+      <Link
+        href={`/?id=${encodeURIComponent(result.token)}`}
+        target="_blank"
+        className="px-6 py-5 flex items-center gap-4 border-b border-gray-100 hover:bg-gray-50 transition-colors no-underline group"
+      >
+        <div className="w-14 h-14 rounded-full bg-[var(--maroon)] text-white flex items-center justify-center text-xl font-bold font-[family-name:var(--font-playfair)] flex-shrink-0 group-hover:opacity-90 transition-opacity">
           {initials}
         </div>
         <div className="flex-1 min-w-0">
-          <div className="font-bold text-gray-800 text-lg leading-tight">{attendee.name}</div>
+          <div className="font-bold text-gray-800 text-lg leading-tight group-hover:text-[var(--maroon)] transition-colors">{attendee.name}</div>
           <div className="text-xs text-[var(--gray)] mt-0.5">{attendeeId}</div>
           <div className="flex items-center gap-1.5 mt-1.5 text-xs font-semibold text-[var(--maroon)]">
             {packageIcons[attendee.package]}
             {packageShortNames[attendee.package]}
           </div>
         </div>
-      </div>
+        <FaExternalLinkAlt className="text-gray-300 text-xs flex-shrink-0 group-hover:text-[var(--maroon)] transition-colors" />
+      </Link>
 
       {/* Check-in Action */}
       <div className="px-6 py-5 space-y-3">
