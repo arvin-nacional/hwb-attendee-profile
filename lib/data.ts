@@ -23,10 +23,10 @@ export const paymentStatusLabels: Record<PaymentStatus, string> = {
 };
 
 export const packageLabels: Record<AttendeePackage, string> = {
-  conference: "HWB Package A Conference Only - ₱3,000.00",
-  "3lectures": "HWB Package B (Conference and Choice of 3 Lectures) - ₱4,500.00",
-  "5lectures": "HWB Package C (Conference and 5 Lectures) - ₱5,000.00",
-  full: "HWB Full Package (Conference, 5 Lectures and Workshop) - ₱35,000.00",
+  conference: "HWB Package A — Conference Only",
+  "3lectures": "HWB Package B — Conference and Choice of 3 Lectures",
+  "5lectures": "HWB Package C — Conference and 5 Lectures",
+  full: "HWB Full Package — Conference, 5 Lectures and Workshop",
 };
 
 export const packageShortNames: Record<AttendeePackage, string> = {
