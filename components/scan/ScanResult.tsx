@@ -79,7 +79,6 @@ export function ScanResult({ result, eventName, eventId, onReset, onCheckedIn }:
       {/* Attendee Info */}
       <Link
         href={`/?id=${encodeURIComponent(result.token)}`}
-        target="_blank"
         className="px-6 py-5 flex items-center gap-4 border-b border-gray-100 hover:bg-gray-50 transition-colors no-underline group"
       >
         <div className="w-14 h-14 rounded-full bg-[var(--maroon)] text-white flex items-center justify-center text-xl font-bold font-[family-name:var(--font-playfair)] flex-shrink-0 group-hover:opacity-90 transition-opacity">
