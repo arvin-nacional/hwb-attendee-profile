@@ -14,6 +14,7 @@ import {
   FaStarHalfAlt,
   FaTicketAlt,
   FaArrowLeft,
+  FaQrcode,
   FaLock,
   FaEdit,
   FaTimes,
@@ -316,6 +317,13 @@ export default function AdminPage() {
           </div>
         </div>
         <div className="flex items-center gap-3">
+          <Link
+            href="/scan"
+            className="bg-white/10 border border-white/20 px-4 py-1.5 rounded-full text-sm flex items-center gap-2 hover:bg-white/20 transition-colors no-underline text-white"
+          >
+            <FaQrcode />
+            Check-In
+          </Link>
           <Link
             href="/"
             className="bg-white/10 border border-white/20 px-4 py-1.5 rounded-full text-sm flex items-center gap-2 hover:bg-white/20 transition-colors no-underline text-white"
