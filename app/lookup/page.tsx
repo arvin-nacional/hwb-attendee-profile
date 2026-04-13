@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
+import { getInitials } from "@/lib/utils";
 import Link from "next/link";
 import {
   FaMonument,
@@ -55,7 +56,7 @@ const packageColors: Record<AttendeePackage, string> = {
 function AttendeeCard({ entry, onClose }: { entry: AttendeeEntry; onClose: () => void }) {
   const { id, attendee } = entry;
   const accessibleIds = getAccessibleEventIds(attendee);
-  const initials = attendee.name.split(" ").map((n) => n[0]).join("").slice(0, 2);
+  const initials = getInitials(attendee.name);
 
   return (
     <div className="fixed inset-0 z-50 bg-black/40 flex items-end sm:items-center justify-center p-0 sm:p-6">
@@ -329,7 +330,7 @@ export default function LookupPage() {
                 className="w-full bg-white rounded-2xl px-5 py-4 flex items-center gap-4 text-left hover:shadow-md transition-shadow border-2 border-transparent hover:border-[var(--maroon)]/20 active:scale-[0.99]"
               >
                 <div className="w-10 h-10 rounded-full bg-[var(--maroon)] text-white flex items-center justify-center text-sm font-bold font-[family-name:var(--font-playfair)] flex-shrink-0">
-                  {entry.attendee.name.split(" ").map((n) => n[0]).join("").slice(0, 2)}
+                  {getInitials(entry.attendee.name)}
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="font-semibold text-gray-800 text-sm">{entry.attendee.name}</div>

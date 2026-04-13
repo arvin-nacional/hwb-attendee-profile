@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { getInitials } from "@/lib/utils";
 import {
   FaMonument,
   FaUserShield,
@@ -599,7 +600,7 @@ export default function AdminPage() {
                     href={`/?id=${encodeURIComponent(token)}`}
                     className="w-10 h-10 bg-[var(--maroon)] text-white rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 font-[family-name:var(--font-playfair)] no-underline"
                   >
-                    {attendee.name.split(" ").map((n) => n[0]).join("").slice(0, 2)}
+                    {getInitials(attendee.name)}
                   </Link>
 
                   {/* Info — clickable */}

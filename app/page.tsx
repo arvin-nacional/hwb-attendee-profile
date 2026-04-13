@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback, useEffect, Suspense } from "react";
+import { getInitials } from "@/lib/utils";
 import { useSearchParams } from "next/navigation";
 import { QRCodeSVG } from "qrcode.react";
 import {
@@ -88,10 +89,7 @@ function AttendeeProfile({
   attendeeId: string;
   token: string;
 }) {
-  const initials = attendee.name
-    .split(" ")
-    .map((n) => n[0])
-    .join("");
+  const initials = getInitials(attendee.name);
   const accessibleIds = getAccessibleEventIds(attendee);
 
   return (
