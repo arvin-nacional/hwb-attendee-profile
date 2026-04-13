@@ -111,8 +111,9 @@ export async function addAttendee(formData: FormData): Promise<{
   try {
     await connectDB();
 
-    const count = await AttendeeModel.countDocuments();
-    const id = generateId(count + 1);
+    const last = await AttendeeModel.findOne().sort({ attendeeId: -1 }).select("attendeeId").lean();
+    const lastNum = last ? parseInt((last as { attendeeId: string }).attendeeId.split("-")[2], 10) : 0;
+    const id = generateId(lastNum + 1);
 
     await AttendeeModel.create({
       attendeeId: id,
