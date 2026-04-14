@@ -19,6 +19,8 @@ import {
   FaLock,
   FaEdit,
   FaTimes,
+  FaDownload,
+  FaSpinner,
 } from "react-icons/fa";
 import {
   addAttendee,
@@ -29,6 +31,7 @@ import {
   checkAdminSession,
   clearAdminSession,
 } from "@/lib/actions";
+import { downloadSingleQR, downloadAllQRs } from "@/lib/qrDownload";
 import {
   type Attendee,
   type AttendeePackage,
@@ -50,6 +53,44 @@ const packageIcons: Record<AttendeePackage, React.ReactNode> = {
   "5lectures": <FaStar className="text-xs" />,
   full: <FaCrown className="text-xs" />,
 };
+
+function QRDownloadButton({ id, name, token }: { id: string; name: string; token: string }) {
+  const [busy, setBusy] = useState(false);
+  const handle = async () => {
+    setBusy(true);
+    await downloadSingleQR(name, id, token);
+    setBusy(false);
+  };
+  return (
+    <button
+      onClick={handle}
+      disabled={busy}
+      className="text-gray-300 hover:text-[var(--maroon)] transition-colors p-2 cursor-pointer rounded-lg hover:bg-gray-50 disabled:opacity-50"
+      title="Download QR code"
+    >
+      {busy ? <FaSpinner className="text-sm animate-spin" /> : <FaQrcode className="text-sm" />}
+    </button>
+  );
+}
+
+function DownloadAllButton({ attendees }: { attendees: { id: string; attendee: Attendee; token: string }[] }) {
+  const [busy, setBusy] = useState(false);
+  const handle = async () => {
+    setBusy(true);
+    await downloadAllQRs(attendees.map(({ id, attendee, token }) => ({ id, name: attendee.name, token })));
+    setBusy(false);
+  };
+  return (
+    <button
+      onClick={handle}
+      disabled={busy}
+      className="flex items-center gap-2 bg-[var(--maroon)] text-white text-xs font-semibold px-3 py-2 rounded-xl hover:opacity-90 transition-opacity disabled:opacity-50 cursor-pointer"
+    >
+      {busy ? <FaSpinner className="animate-spin" /> : <FaDownload />}
+      {busy ? "Generating..." : "Download All QR Codes"}
+    </button>
+  );
+}
 
 export default function AdminPage() {
   const [authenticated, setAuthenticated] = useState(false);
@@ -567,16 +608,19 @@ export default function AdminPage() {
 
         {/* Attendee List */}
         <div className="bg-white rounded-2xl overflow-hidden shadow-[0_4px_20px_rgba(0,0,0,0.08)] mb-8">
-          <div className="px-10 py-7 border-b border-[#f0f0f0] flex items-center justify-between">
+          <div className="px-6 sm:px-10 py-5 border-b border-[#f0f0f0] flex items-center justify-between gap-3 flex-wrap">
             <div className="flex items-center gap-3">
               <FaUsers className="text-[var(--maroon)] text-xl" />
               <h2 className="font-[family-name:var(--font-playfair)] text-xl text-[var(--maroon)] font-bold">
                 All Attendees
               </h2>
+              <span className="text-sm text-[var(--gray)] font-medium">
+                {attendeeList.length} registered
+              </span>
             </div>
-            <span className="text-sm text-[var(--gray)] font-medium">
-              {attendeeList.length} registered
-            </span>
+            {attendeeList.length > 0 && (
+              <DownloadAllButton attendees={attendeeList} />
+            )}
           </div>
 
           {loading ? (
@@ -630,6 +674,7 @@ export default function AdminPage() {
 
                   {/* Actions */}
                   <div className="flex items-center gap-1 flex-shrink-0">
+                    <QRDownloadButton id={id} name={attendee.name} token={token} />
                     <button
                       onClick={() => openEditModal(id, attendee)}
                       className="text-gray-300 hover:text-[var(--maroon)] transition-colors p-2 cursor-pointer rounded-lg hover:bg-gray-50"
