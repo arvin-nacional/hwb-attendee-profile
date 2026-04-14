@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { getInitials } from "@/lib/utils";
 import Link from "next/link";
 import {
   FaCheckCircle,
@@ -39,11 +40,7 @@ export function ScanResult({ result, eventName, eventId, onReset, onCheckedIn }:
   const [error, setError] = useState<string | null>(null);
 
   const { attendee, attendeeId, hasAccess } = result;
-  const initials = attendee.name
-    .split(" ")
-    .map((n) => n[0])
-    .join("")
-    .slice(0, 2);
+  const initials = getInitials(attendee.name);
 
   const handleCheckIn = async () => {
     setCheckingIn(true);
