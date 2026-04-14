@@ -104,6 +104,9 @@ export default function AdminPage() {
     { id: string; attendee: Attendee; token: string }[]
   >([]);
   const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 20;
   const [submitting, setSubmitting] = useState(false);
   const [selectedPackage, setSelectedPackage] = useState<string>("");
   const [selectedDiscount, setSelectedDiscount] = useState<string>("none");
@@ -608,6 +611,20 @@ export default function AdminPage() {
         </div>
 
         {/* Attendee List */}
+        {(() => {
+          const q = search.trim().toLowerCase();
+          const filtered = q
+            ? attendeeList.filter(
+                ({ id, attendee }) =>
+                  attendee.name.toLowerCase().includes(q) ||
+                  id.toLowerCase().includes(q) ||
+                  attendee.email.toLowerCase().includes(q)
+              )
+            : attendeeList;
+          const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+          const safePage = Math.min(page, totalPages);
+          const paged = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+          return (
         <div className="bg-white rounded-2xl overflow-hidden shadow-[0_4px_20px_rgba(0,0,0,0.08)] mb-8">
           <div className="px-6 sm:px-10 py-5 border-b border-[#f0f0f0] flex items-center justify-between gap-3 flex-wrap">
             <div className="flex items-center gap-3">
@@ -616,13 +633,37 @@ export default function AdminPage() {
                 All Attendees
               </h2>
               <span className="text-sm text-[var(--gray)] font-medium">
-                {attendeeList.length} registered
+                {q ? `${filtered.length} of ${attendeeList.length}` : `${attendeeList.length} registered`}
               </span>
             </div>
             {attendeeList.length > 0 && (
               <DownloadAllButton attendees={attendeeList} />
             )}
           </div>
+
+          {/* Search bar */}
+          {!loading && attendeeList.length > 0 && (
+            <div className="px-6 sm:px-10 py-3 border-b border-[#f0f0f0]">
+              <div className="relative">
+                <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-300 text-sm" />
+                <input
+                  type="text"
+                  value={search}
+                  onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+                  placeholder="Search by name, ID, or email..."
+                  className="w-full pl-9 pr-4 py-2.5 text-sm border-2 border-gray-100 rounded-xl outline-none focus:border-[var(--maroon)] transition-colors bg-[#fafafa] placeholder:text-gray-300"
+                />
+                {search && (
+                  <button
+                    onClick={() => { setSearch(""); setPage(1); }}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-300 hover:text-gray-500"
+                  >
+                    <FaTimes className="text-xs" />
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
 
           {loading ? (
             <div className="px-10 py-12 text-center text-[var(--gray)]">
@@ -632,9 +673,13 @@ export default function AdminPage() {
             <div className="px-10 py-12 text-center text-[var(--gray)]">
               No attendees yet. Add one using the form above.
             </div>
+          ) : filtered.length === 0 ? (
+            <div className="px-10 py-12 text-center text-[var(--gray)]">
+              No attendees match &ldquo;{search}&rdquo;.
+            </div>
           ) : (
             <div>
-              {attendeeList.map(({ id, attendee, token }) => (
+              {paged.map(({ id, attendee, token }) => (
                 <div
                   key={id}
                   className="flex items-center px-4 sm:px-8 py-4 border-b border-[#f5f5f5] last:border-b-0 hover:bg-[#fafafa] transition-colors gap-3"
@@ -695,7 +740,58 @@ export default function AdminPage() {
               ))}
             </div>
           )}
+
+          {/* Pagination */}
+          {!loading && totalPages > 1 && (
+            <div className="px-6 sm:px-10 py-4 border-t border-[#f0f0f0] flex items-center justify-between gap-4">
+              <span className="text-xs text-[var(--gray)]">
+                Page {safePage} of {totalPages} &mdash; showing {(safePage - 1) * PAGE_SIZE + 1}–{Math.min(safePage * PAGE_SIZE, filtered.length)} of {filtered.length}
+              </span>
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={safePage === 1}
+                  className="px-3 py-1.5 text-xs rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                >
+                  ← Prev
+                </button>
+                {Array.from({ length: totalPages }, (_, i) => i + 1)
+                  .filter((p) => p === 1 || p === totalPages || Math.abs(p - safePage) <= 1)
+                  .reduce<(number | "...")[]>((acc, p, i, arr) => {
+                    if (i > 0 && (p as number) - (arr[i - 1] as number) > 1) acc.push("...");
+                    acc.push(p);
+                    return acc;
+                  }, [])
+                  .map((p, i) =>
+                    p === "..." ? (
+                      <span key={`ellipsis-${i}`} className="px-2 text-gray-300 text-xs">…</span>
+                    ) : (
+                      <button
+                        key={p}
+                        onClick={() => setPage(p as number)}
+                        className={`w-8 h-8 text-xs rounded-lg border transition-colors ${
+                          safePage === p
+                            ? "bg-[var(--maroon)] text-white border-[var(--maroon)]"
+                            : "border-gray-200 text-gray-600 hover:bg-gray-50"
+                        }`}
+                      >
+                        {p}
+                      </button>
+                    )
+                  )}
+                <button
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={safePage === totalPages}
+                  className="px-3 py-1.5 text-xs rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                >
+                  Next →
+                </button>
+              </div>
+            </div>
+          )}
         </div>
+          );
+        })()}
       </div>
 
       {/* Edit Modal */}
