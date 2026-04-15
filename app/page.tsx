@@ -173,6 +173,15 @@ function AttendeeProfile({
               )
             }
           />
+          {attendee.paymentStatus !== "fully_paid" && attendee.balance > 0 && (
+            <DetailItem
+              label="Balance Due"
+              value={
+                <span className="text-amber-600 font-bold">₱{attendee.balance.toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span>
+              }
+              odd={false}
+            />
+          )}
         </div>
       </div>
 

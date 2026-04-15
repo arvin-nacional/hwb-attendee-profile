@@ -15,6 +15,7 @@ export interface IAttendee extends Document {
   discountPercent: number;
   originalAmount: number;
   finalAmount: number;
+  balance: number;
   notes: string;
 }
 
@@ -35,7 +36,7 @@ const AttendeeSchema = new Schema<IAttendee>(
     paymentStatus: {
       type: String,
       required: true,
-      enum: ["fully_paid", "downpayment_50"],
+      enum: ["fully_paid", "downpayment_50", "partial"],
     },
     discountType: {
       type: String,
@@ -45,6 +46,7 @@ const AttendeeSchema = new Schema<IAttendee>(
     discountPercent: { type: Number, default: 0 },
     originalAmount: { type: Number, default: 0 },
     finalAmount: { type: Number, default: 0 },
+    balance: { type: Number, default: 0 },
     notes: { type: String, default: "" },
   },
   { timestamps: true }

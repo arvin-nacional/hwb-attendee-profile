@@ -94,6 +94,7 @@ export async function addAttendee(formData: FormData): Promise<{
   const selectedSchedule = formData.get("selectedSchedule") as ScheduleOption | null;
   const paymentStatus = formData.get("paymentStatus") as PaymentStatus;
   const discountType = (formData.get("discountType") as DiscountType) || "none";
+  const balanceRaw = formData.get("balance") as string;
   const notes = formData.get("notes") as string;
 
   if (!name || !email || !pkg || !paymentStatus) {
@@ -107,6 +108,10 @@ export async function addAttendee(formData: FormData): Promise<{
   const discountPercent = getDiscountPercent(discountType, pkg);
   const originalAmount = packagePrices[pkg];
   const finalAmount = Math.round(originalAmount * (1 - discountPercent / 100));
+  const balance =
+    paymentStatus === "fully_paid" ? 0 :
+    paymentStatus === "downpayment_50" ? Math.round(finalAmount / 2) :
+    (parseFloat(balanceRaw) || 0);
 
   try {
     await connectDB();
@@ -129,6 +134,7 @@ export async function addAttendee(formData: FormData): Promise<{
       discountPercent,
       originalAmount,
       finalAmount,
+      balance,
       notes: (notes || "").trim(),
     });
 
@@ -160,6 +166,7 @@ export async function getAttendee(id: string): Promise<Attendee | null> {
         discountPercent: doc.discountPercent ?? 0,
         originalAmount: doc.originalAmount ?? packagePrices[doc.package as AttendeePackage] ?? 0,
         finalAmount: doc.finalAmount ?? packagePrices[doc.package as AttendeePackage] ?? 0,
+        balance: doc.balance ?? 0,
         notes: doc.notes,
       };
     }
@@ -196,6 +203,7 @@ export async function getAllAttendees(): Promise<
           discountPercent: doc.discountPercent ?? 0,
           originalAmount: doc.originalAmount ?? packagePrices[doc.package as AttendeePackage] ?? 0,
           finalAmount: doc.finalAmount ?? packagePrices[doc.package as AttendeePackage] ?? 0,
+          balance: doc.balance ?? 0,
           notes: doc.notes,
         },
       });
@@ -240,6 +248,7 @@ export async function updateAttendee(
   const selectedSchedule = formData.get("selectedSchedule") as ScheduleOption | null;
   const paymentStatus = formData.get("paymentStatus") as PaymentStatus;
   const discountType = (formData.get("discountType") as DiscountType) || "none";
+  const balanceRaw = formData.get("balance") as string;
   const notes = formData.get("notes") as string;
 
   if (!name || !email || !pkg || !paymentStatus) {
@@ -249,6 +258,10 @@ export async function updateAttendee(
   const discountPercent = getDiscountPercent(discountType, pkg);
   const originalAmount = packagePrices[pkg];
   const finalAmount = Math.round(originalAmount * (1 - discountPercent / 100));
+  const balance =
+    paymentStatus === "fully_paid" ? 0 :
+    paymentStatus === "downpayment_50" ? Math.round(finalAmount / 2) :
+    (parseFloat(balanceRaw) || 0);
 
   try {
     await connectDB();
@@ -267,6 +280,7 @@ export async function updateAttendee(
         discountPercent,
         originalAmount,
         finalAmount,
+        balance,
         notes: (notes || "").trim(),
       },
       { new: true }

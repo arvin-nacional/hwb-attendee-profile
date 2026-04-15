@@ -11,15 +11,17 @@ export interface Attendee {
   discountPercent: number;
   originalAmount: number;
   finalAmount: number;
+  balance: number;
   notes: string;
 }
 
 export type AttendeePackage = "conference" | "3lectures" | "5lectures" | "full";
-export type PaymentStatus = "fully_paid" | "downpayment_50";
+export type PaymentStatus = "fully_paid" | "downpayment_50" | "partial";
 
 export const paymentStatusLabels: Record<PaymentStatus, string> = {
   fully_paid: "Fully Paid",
   downpayment_50: "50% Downpayment",
+  partial: "Partial Payment",
 };
 
 export const packageLabels: Record<AttendeePackage, string> = {
@@ -123,6 +125,7 @@ export const attendees: Record<string, Attendee> = {
     discountPercent: 0,
     originalAmount: 35000,
     finalAmount: 35000,
+    balance: 0,
     notes: "VIP Guest — Senior Conservator",
   },
   "HWB-2026-0042": {
@@ -138,6 +141,7 @@ export const attendees: Record<string, Attendee> = {
     discountPercent: 0,
     originalAmount: 5000,
     finalAmount: 5000,
+    balance: 0,
     notes: "",
   },
   "HWB-2026-0078": {
@@ -153,6 +157,7 @@ export const attendees: Record<string, Attendee> = {
     discountPercent: 15,
     originalAmount: 4500,
     finalAmount: 3825,
+    balance: 1912.50,
     notes: "Group registration — Heritage Conservation Society (10 pax)",
   },
   "HWB-2026-0150": {
@@ -168,6 +173,7 @@ export const attendees: Record<string, Attendee> = {
     discountPercent: 20,
     originalAmount: 3000,
     finalAmount: 2400,
+    balance: 1200,
     notes: "Senior/PWD discount applied",
   },
 };

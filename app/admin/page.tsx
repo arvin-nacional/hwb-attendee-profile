@@ -110,6 +110,7 @@ export default function AdminPage() {
   const [submitting, setSubmitting] = useState(false);
   const [selectedPackage, setSelectedPackage] = useState<string>("");
   const [selectedDiscount, setSelectedDiscount] = useState<string>("none");
+  const [selectedPaymentStatus, setSelectedPaymentStatus] = useState<string>("");
   const [message, setMessage] = useState<{
     type: "success" | "error";
     text: string;
@@ -124,6 +125,7 @@ export default function AdminPage() {
     selectedSchedule: "" as string,
     paymentStatus: "" as string,
     discountType: "none" as string,
+    balance: "" as string,
     notes: "",
   });
   const [editSubmitting, setEditSubmitting] = useState(false);
@@ -195,6 +197,7 @@ export default function AdminPage() {
         form.reset();
         setSelectedPackage("");
         setSelectedDiscount("none");
+        setSelectedPaymentStatus("");
         fetchAttendees();
       } else {
         setMessage({ type: "error", text: result.message });
@@ -216,6 +219,7 @@ export default function AdminPage() {
       selectedSchedule: attendee.selectedSchedule || "",
       paymentStatus: attendee.paymentStatus,
       discountType: attendee.discountType || "none",
+      balance: attendee.paymentStatus === "partial" ? String(attendee.balance ?? "") : "",
       notes: attendee.notes,
     });
   }
@@ -235,6 +239,7 @@ export default function AdminPage() {
       }
       formData.set("paymentStatus", editForm.paymentStatus);
       formData.set("discountType", editForm.discountType);
+      formData.set("balance", editForm.balance);
       formData.set("notes", editForm.notes);
 
       const result = await updateAttendee(editingId, formData);
@@ -522,6 +527,8 @@ export default function AdminPage() {
                 <select
                   name="paymentStatus"
                   required
+                  value={selectedPaymentStatus}
+                  onChange={(e) => setSelectedPaymentStatus(e.target.value)}
                   className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl text-base outline-none focus:border-[var(--maroon)] transition-colors bg-white"
                 >
                   <option value="">Select status...</option>
@@ -537,6 +544,23 @@ export default function AdminPage() {
                   ))}
                 </select>
               </div>
+
+              {/* Balance */}
+              {selectedPaymentStatus === "partial" && (
+                <div>
+                  <label className="block text-xs text-[var(--gray)] uppercase tracking-[1px] mb-2 font-semibold">
+                    Balance Due (₱)
+                  </label>
+                  <input
+                    type="number"
+                    name="balance"
+                    min="0"
+                    step="0.01"
+                    placeholder="Enter remaining balance..."
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl text-base outline-none focus:border-[var(--maroon)] transition-colors"
+                  />
+                </div>
+              )}
 
               {/* Discount Type */}
               <div>
@@ -715,6 +739,11 @@ export default function AdminPage() {
                       >
                         {paymentStatusLabels[attendee.paymentStatus]}
                       </span>
+                      {attendee.paymentStatus !== "fully_paid" && attendee.balance > 0 && (
+                        <span className="text-xs font-semibold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full">
+                          bal: ₱{attendee.balance.toLocaleString("en-PH", { minimumFractionDigits: 2 })}
+                        </span>
+                      )}
                     </div>
                   </Link>
 
@@ -918,7 +947,7 @@ export default function AdminPage() {
                   </label>
                   <select
                     value={editForm.paymentStatus}
-                    onChange={(e) => setEditForm({ ...editForm, paymentStatus: e.target.value })}
+                    onChange={(e) => setEditForm({ ...editForm, paymentStatus: e.target.value, balance: e.target.value === "partial" ? editForm.balance : "" })}
                     required
                     className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl text-base outline-none focus:border-[var(--maroon)] transition-colors bg-white"
                   >
@@ -935,6 +964,24 @@ export default function AdminPage() {
                     ))}
                   </select>
                 </div>
+
+                {/* Balance */}
+                {editForm.paymentStatus === "partial" && (
+                  <div>
+                    <label className="block text-xs text-[var(--gray)] uppercase tracking-[1px] mb-2 font-semibold">
+                      Balance Due (₱)
+                    </label>
+                    <input
+                      type="number"
+                      value={editForm.balance}
+                      onChange={(e) => setEditForm({ ...editForm, balance: e.target.value })}
+                      min="0"
+                      step="0.01"
+                      placeholder="Enter remaining balance..."
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl text-base outline-none focus:border-[var(--maroon)] transition-colors"
+                    />
+                  </div>
+                )}
 
                 {/* Discount Type */}
                 <div>
