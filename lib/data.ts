@@ -72,12 +72,22 @@ export function getDiscountPercent(
   }
 }
 
-export type ScheduleOption = "1,2,5" | "1,3,5" | "1,4,5" | "2,3,5" | "2,4,5" | "3,4,5";
+export type ScheduleOption =
+  | "1,2,3" | "1,2,4" | "1,2,5"
+  | "1,3,4" | "1,3,5"
+  | "1,4,5"
+  | "2,3,4" | "2,3,5"
+  | "2,4,5"
+  | "3,4,5";
 
 export const scheduleOptions: { value: ScheduleOption; label: string; eventIds: string[] }[] = [
+  { value: "1,2,3", label: "Lecture Days 1, 2, and 3", eventIds: ["lec1", "lec2", "lec3"] },
+  { value: "1,2,4", label: "Lecture Days 1, 2, and 4", eventIds: ["lec1", "lec2", "lec4"] },
   { value: "1,2,5", label: "Lecture Days 1, 2, and 5", eventIds: ["lec1", "lec2", "closing"] },
+  { value: "1,3,4", label: "Lecture Days 1, 3, and 4", eventIds: ["lec1", "lec3", "lec4"] },
   { value: "1,3,5", label: "Lecture Days 1, 3, and 5", eventIds: ["lec1", "lec3", "closing"] },
   { value: "1,4,5", label: "Lecture Days 1, 4, and 5", eventIds: ["lec1", "lec4", "closing"] },
+  { value: "2,3,4", label: "Lecture Days 2, 3, and 4", eventIds: ["lec2", "lec3", "lec4"] },
   { value: "2,3,5", label: "Lecture Days 2, 3, and 5", eventIds: ["lec2", "lec3", "closing"] },
   { value: "2,4,5", label: "Lecture Days 2, 4, and 5", eventIds: ["lec2", "lec4", "closing"] },
   { value: "3,4,5", label: "Lecture Days 3, 4, and 5", eventIds: ["lec3", "lec4", "closing"] },

@@ -184,7 +184,7 @@ export async function getAllAttendees(): Promise<
 
   try {
     await connectDB();
-    const docs = await AttendeeModel.find().sort({ attendeeId: 1 }).lean();
+    const docs = await AttendeeModel.find().sort({ attendeeId: -1 }).lean();
 
     for (const doc of docs) {
       results.push({
