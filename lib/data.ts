@@ -12,11 +12,10 @@ export interface Attendee {
   originalAmount: number;
   finalAmount: number;
   balance: number;
-  customEventIds?: string[];
   notes: string;
 }
 
-export type AttendeePackage = "conference" | "3lectures" | "5lectures" | "full" | "custom";
+export type AttendeePackage = "conference" | "3lectures" | "5lectures" | "full";
 export type PaymentStatus = "fully_paid" | "downpayment_50" | "partial";
 
 export const paymentStatusLabels: Record<PaymentStatus, string> = {
@@ -30,7 +29,6 @@ export const packageLabels: Record<AttendeePackage, string> = {
   "3lectures": "HWB Package B — Conference and Choice of 3 Lectures",
   "5lectures": "HWB Package C — Conference and 5 Lectures",
   full: "HWB Full Package — Conference, 5 Lectures and Workshop",
-  custom: "Custom Access — Selected Events Only",
 };
 
 export const packageShortNames: Record<AttendeePackage, string> = {
@@ -38,7 +36,6 @@ export const packageShortNames: Record<AttendeePackage, string> = {
   "3lectures": "Package B",
   "5lectures": "Package C",
   full: "Full Package",
-  custom: "Custom",
 };
 
 export const packagePrices: Record<AttendeePackage, number> = {
@@ -46,7 +43,6 @@ export const packagePrices: Record<AttendeePackage, number> = {
   "3lectures": 4500,
   "5lectures": 5000,
   full: 35000,
-  custom: 0,
 };
 
 export type DiscountType = "none" | "senior_pwd_student" | "bulk_5" | "bulk_10";
@@ -63,7 +59,6 @@ export function getDiscountPercent(
   pkg: AttendeePackage
 ): number {
   if (discountType === "none") return 0;
-  if (pkg === "custom") return 0;
   if (pkg === "full") return 5;
   switch (discountType) {
     case "senior_pwd_student":
@@ -111,8 +106,6 @@ export function getAccessibleEventIds(attendee: Attendee): string[] {
       return ["conf", "lec1", "lec2", "lec3", "lec4", "closing"];
     case "full":
       return ["conf", "lec1", "lec2", "lec3", "lec4", "closing", "workshop"];
-    case "custom":
-      return attendee.customEventIds ?? [];
     default:
       return [];
   }
@@ -266,5 +259,4 @@ export const badgeClasses: Record<AttendeePackage, string> = {
   "3lectures": "bg-gold text-maroon-dark",
   "5lectures": "bg-gradient-to-br from-gold to-gold-light text-maroon-dark",
   full: "bg-gradient-to-br from-amber-400 to-amber-500 text-maroon-dark",
-  custom: "bg-white/20 text-white",
 };

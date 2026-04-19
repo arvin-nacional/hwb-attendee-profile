@@ -16,7 +16,6 @@ export interface IAttendee extends Document {
   originalAmount: number;
   finalAmount: number;
   balance: number;
-  customEventIds?: string[];
   notes: string;
 }
 
@@ -29,7 +28,7 @@ const AttendeeSchema = new Schema<IAttendee>(
     package: {
       type: String,
       required: true,
-      enum: ["conference", "3lectures", "5lectures", "full", "custom"],
+      enum: ["conference", "3lectures", "5lectures", "full"],
     },
     packageLabel: { type: String, required: true },
     selectedSchedule: { type: String, default: null },
@@ -48,7 +47,6 @@ const AttendeeSchema = new Schema<IAttendee>(
     originalAmount: { type: Number, default: 0 },
     finalAmount: { type: Number, default: 0 },
     balance: { type: Number, default: 0 },
-    customEventIds: { type: [String], default: [] },
     notes: { type: String, default: "" },
   },
   { timestamps: true }
