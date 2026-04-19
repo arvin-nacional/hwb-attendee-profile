@@ -96,12 +96,13 @@ export async function addAttendee(formData: FormData): Promise<{
   const discountType = (formData.get("discountType") as DiscountType) || "none";
   const balanceRaw = formData.get("balance") as string;
   const notes = formData.get("notes") as string;
+  const customEventIds = pkg === "custom" ? (formData.getAll("customEventIds") as string[]) : [];
 
   if (!name || !email || !pkg) {
     return { success: false, message: "Name, email, and package are required." };
   }
 
-  if (pkg !== "guest" && !paymentStatus) {
+  if (pkg !== "guest" && pkg !== "custom" && !paymentStatus) {
     return { success: false, message: "Payment status is required." };
   }
 
@@ -109,12 +110,13 @@ export async function addAttendee(formData: FormData): Promise<{
     return { success: false, message: "Please select a lecture schedule for Package B." };
   }
 
-  const effectivePaymentStatus: PaymentStatus = pkg === "guest" ? "fully_paid" : paymentStatus;
-  const discountPercent = pkg === "guest" ? 0 : getDiscountPercent(discountType, pkg);
-  const originalAmount = pkg === "guest" ? 0 : packagePrices[pkg];
-  const finalAmount = pkg === "guest" ? 0 : Math.round(originalAmount * (1 - discountPercent / 100));
+  const isNoPayment = pkg === "guest" || pkg === "custom";
+  const effectivePaymentStatus: PaymentStatus = isNoPayment ? "fully_paid" : paymentStatus;
+  const discountPercent = isNoPayment ? 0 : getDiscountPercent(discountType, pkg);
+  const originalAmount = isNoPayment ? 0 : packagePrices[pkg];
+  const finalAmount = isNoPayment ? 0 : Math.round(originalAmount * (1 - discountPercent / 100));
   const balance =
-    pkg === "guest" ? 0 :
+    isNoPayment ? 0 :
     effectivePaymentStatus === "fully_paid" ? 0 :
     effectivePaymentStatus === "downpayment_50" ? Math.round(finalAmount / 2) :
     (parseFloat(balanceRaw) || 0);
@@ -134,6 +136,7 @@ export async function addAttendee(formData: FormData): Promise<{
       package: pkg,
       packageLabel: packageLabels[pkg],
       selectedSchedule: pkg === "3lectures" ? selectedSchedule : null,
+      customEventIds: pkg === "custom" ? customEventIds : [],
       registrationDate: new Date().toISOString().split("T")[0],
       paymentStatus: effectivePaymentStatus,
       discountType,
@@ -174,6 +177,7 @@ export async function getAttendee(id: string): Promise<Attendee | null> {
         finalAmount: doc.finalAmount ?? packagePrices[doc.package as AttendeePackage] ?? 0,
         balance: doc.balance ?? 0,
         notes: doc.notes,
+        customEventIds: (doc.customEventIds as string[]) || [],
       };
     }
   } catch (error) {
@@ -211,6 +215,7 @@ export async function getAllAttendees(): Promise<
           finalAmount: doc.finalAmount ?? packagePrices[doc.package as AttendeePackage] ?? 0,
           balance: doc.balance ?? 0,
           notes: doc.notes,
+          customEventIds: (doc.customEventIds as string[]) || [],
         },
       });
     }
@@ -256,21 +261,23 @@ export async function updateAttendee(
   const discountType = (formData.get("discountType") as DiscountType) || "none";
   const balanceRaw = formData.get("balance") as string;
   const notes = formData.get("notes") as string;
+  const customEventIds = pkg === "custom" ? (formData.getAll("customEventIds") as string[]) : [];
 
   if (!name || !email || !pkg) {
     return { success: false, message: "Name, email, and package are required." };
   }
 
-  if (pkg !== "guest" && !paymentStatus) {
+  if (pkg !== "guest" && pkg !== "custom" && !paymentStatus) {
     return { success: false, message: "Payment status is required." };
   }
 
-  const effectivePaymentStatus: PaymentStatus = pkg === "guest" ? "fully_paid" : paymentStatus;
-  const discountPercent = pkg === "guest" ? 0 : getDiscountPercent(discountType, pkg);
-  const originalAmount = pkg === "guest" ? 0 : packagePrices[pkg];
-  const finalAmount = pkg === "guest" ? 0 : Math.round(originalAmount * (1 - discountPercent / 100));
+  const isNoPayment = pkg === "guest" || pkg === "custom";
+  const effectivePaymentStatus: PaymentStatus = isNoPayment ? "fully_paid" : paymentStatus;
+  const discountPercent = isNoPayment ? 0 : getDiscountPercent(discountType, pkg);
+  const originalAmount = isNoPayment ? 0 : packagePrices[pkg];
+  const finalAmount = isNoPayment ? 0 : Math.round(originalAmount * (1 - discountPercent / 100));
   const balance =
-    pkg === "guest" ? 0 :
+    isNoPayment ? 0 :
     effectivePaymentStatus === "fully_paid" ? 0 :
     effectivePaymentStatus === "downpayment_50" ? Math.round(finalAmount / 2) :
     (parseFloat(balanceRaw) || 0);
@@ -287,6 +294,7 @@ export async function updateAttendee(
         package: pkg,
         packageLabel: packageLabels[pkg],
         selectedSchedule: pkg === "3lectures" ? selectedSchedule : null,
+        customEventIds: pkg === "custom" ? customEventIds : [],
         paymentStatus: effectivePaymentStatus,
         discountType,
         discountPercent,

@@ -48,6 +48,10 @@ const badgeConfig: Record<
     className: "bg-white/20 text-white",
     icon: <FaPassport />,
   },
+  custom: {
+    className: "bg-purple-100 text-purple-800",
+    icon: <FaCalendarAlt />,
+  },
 };
 
 function WelcomeState() {
@@ -110,7 +114,7 @@ function AttendeeProfile({
             <div className="text-sm opacity-80 mb-4 font-light">
               {attendeeId}
             </div>
-            {attendee.package !== "guest" && (
+            {attendee.package !== "guest" && attendee.package !== "custom" && (
             <div
               className={`inline-flex items-center gap-2 px-4.5 py-2 rounded-lg text-sm font-bold tracking-wide ${badgeConfig[attendee.package].className}`}
             >
@@ -128,7 +132,7 @@ function AttendeeProfile({
         <div className="grid grid-cols-2 max-sm:grid-cols-1">
           <DetailItem label="Email" value={attendee.email} />
           <DetailItem label="Phone" value={attendee.phone} odd={false} />
-          {attendee.package !== "guest" && (
+          {attendee.package !== "guest" && attendee.package !== "custom" && (
             <DetailItem
               label="Payment Status"
               value={
@@ -147,7 +151,7 @@ function AttendeeProfile({
               odd={false}
             />
           )}
-          {attendee.package !== "guest" && (
+          {attendee.package !== "guest" && attendee.package !== "custom" && (
             <DetailItem
               label="Package"
               value={
@@ -168,7 +172,7 @@ function AttendeeProfile({
               odd={false}
             />
           )}
-          {attendee.package !== "guest" && (
+          {attendee.package !== "guest" && attendee.package !== "custom" && (
             <DetailItem
               label="Amount"
               value={
@@ -186,7 +190,7 @@ function AttendeeProfile({
               }
             />
           )}
-          {attendee.package !== "guest" && attendee.paymentStatus !== "fully_paid" && attendee.balance > 0 && (
+          {attendee.package !== "guest" && attendee.package !== "custom" && attendee.paymentStatus !== "fully_paid" && attendee.balance > 0 && (
             <DetailItem
               label="Balance Due"
               value={

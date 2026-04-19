@@ -46,6 +46,7 @@ const packageIcons: Record<AttendeePackage, React.ReactNode> = {
   "5lectures": <FaStar />,
   full: <FaCrown />,
   guest: <FaPassport />,
+  custom: <FaCalendarAlt />,
 };
 
 const packageColors: Record<AttendeePackage, string> = {
@@ -54,6 +55,7 @@ const packageColors: Record<AttendeePackage, string> = {
   "5lectures": "bg-yellow-50 text-yellow-800",
   full: "bg-[var(--cream)] text-[var(--maroon)]",
   guest: "bg-gray-100 text-gray-700",
+  custom: "bg-purple-50 text-purple-800",
 };
 
 function AttendeeCard({ entry, onClose }: { entry: AttendeeEntry; onClose: () => void }) {

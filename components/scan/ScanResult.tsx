@@ -14,6 +14,7 @@ import {
   FaStar,
   FaCrown,
   FaExternalLinkAlt,
+  FaCalendarAlt,
 } from "react-icons/fa";
 import { recordAttendance } from "@/lib/attendanceActions";
 import { packageShortNames, type AttendeePackage } from "@/lib/data";
@@ -25,6 +26,7 @@ const packageIcons: Record<AttendeePackage, React.ReactNode> = {
   "5lectures": <FaStar />,
   full: <FaCrown />,
   guest: <FaUserCheck />,
+  custom: <FaCalendarAlt />,
 };
 
 interface Props {

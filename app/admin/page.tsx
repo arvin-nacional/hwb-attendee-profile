@@ -23,6 +23,7 @@ import {
   FaDownload,
   FaSpinner,
   FaPassport,
+  FaCalendarAlt,
 } from "react-icons/fa";
 import {
   addAttendee,
@@ -46,6 +47,7 @@ import {
   discountTypeLabels,
   getDiscountPercent,
   scheduleOptions,
+  events,
 } from "@/lib/data";
 import Link from "next/link";
 
@@ -55,6 +57,7 @@ const packageIcons: Record<AttendeePackage, React.ReactNode> = {
   "5lectures": <FaStar className="text-xs" />,
   full: <FaCrown className="text-xs" />,
   guest: <FaPassport className="text-xs" />,
+  custom: <FaCalendarAlt className="text-xs" />,
 };
 
 function QRDownloadButton({ id, name, token }: { id: string; name: string; token: string }) {
@@ -125,6 +128,7 @@ export default function AdminPage() {
     phone: "",
     package: "" as string,
     selectedSchedule: "" as string,
+    customEventIds: [] as string[],
     paymentStatus: "" as string,
     discountType: "none" as string,
     balance: "" as string,
@@ -219,6 +223,7 @@ export default function AdminPage() {
       phone: attendee.phone,
       package: attendee.package,
       selectedSchedule: attendee.selectedSchedule || "",
+      customEventIds: attendee.customEventIds || [],
       paymentStatus: attendee.paymentStatus,
       discountType: attendee.discountType || "none",
       balance: attendee.paymentStatus === "partial" ? String(attendee.balance ?? "") : "",
@@ -238,6 +243,9 @@ export default function AdminPage() {
       formData.set("package", editForm.package);
       if (editForm.package === "3lectures" && editForm.selectedSchedule) {
         formData.set("selectedSchedule", editForm.selectedSchedule);
+      }
+      if (editForm.package === "custom") {
+        editForm.customEventIds.forEach((id) => formData.append("customEventIds", id));
       }
       formData.set("paymentStatus", editForm.paymentStatus);
       formData.set("discountType", editForm.discountType);
@@ -521,8 +529,36 @@ export default function AdminPage() {
                 </div>
               )}
 
-              {/* Payment Status — hidden for guest */}
-              {selectedPackage === "guest" ? (
+              {/* Custom Event Selector */}
+              {selectedPackage === "custom" && (
+                <div className="col-span-2 max-sm:col-span-1">
+                  <label className="block text-xs text-[var(--maroon)] uppercase tracking-[1px] mb-3 font-semibold">
+                    Accessible Events
+                  </label>
+                  <div className="space-y-2">
+                    {events.map((event) => (
+                      <label
+                        key={event.id}
+                        className="flex items-center gap-3 px-4 py-3 border-2 border-gray-200 rounded-xl cursor-pointer hover:border-[var(--maroon-light)] transition-colors has-[:checked]:border-[var(--maroon)] has-[:checked]:bg-[var(--cream-light)]"
+                      >
+                        <input
+                          type="checkbox"
+                          name="customEventIds"
+                          value={event.id}
+                          className="accent-[var(--maroon)] w-4 h-4"
+                        />
+                        <div>
+                          <span className="text-base text-gray-800 font-medium">{event.name}</span>
+                          <span className="text-xs text-[var(--gray)] ml-2">{event.date}</span>
+                        </div>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Payment Status — hidden for guest and custom */}
+              {(selectedPackage === "guest" || selectedPackage === "custom") ? (
                 <input type="hidden" name="paymentStatus" value="fully_paid" />
               ) : (
                 <div>
@@ -552,7 +588,7 @@ export default function AdminPage() {
               )}
 
               {/* Balance */}
-              {selectedPackage !== "guest" && selectedPaymentStatus === "partial" && (
+              {selectedPackage !== "guest" && selectedPackage !== "custom" && selectedPaymentStatus === "partial" && (
                 <div>
                   <label className="block text-xs text-[var(--gray)] uppercase tracking-[1px] mb-2 font-semibold">
                     Balance Due (₱)
@@ -569,7 +605,7 @@ export default function AdminPage() {
               )}
 
               {/* Discount Type — hidden for guest */}
-              {selectedPackage !== "guest" && (
+              {selectedPackage !== "guest" && selectedPackage !== "custom" && (
                 <div>
                   <label className="block text-xs text-[var(--gray)] uppercase tracking-[1px] mb-2 font-semibold">
                     Discount
@@ -588,7 +624,7 @@ export default function AdminPage() {
               )}
 
               {/* Price Preview — hidden for guest */}
-              {selectedPackage && selectedPackage !== "guest" && (() => {
+              {selectedPackage && selectedPackage !== "guest" && selectedPackage !== "custom" && (() => {
                 const pct = getDiscountPercent(selectedDiscount as DiscountType, selectedPackage as AttendeePackage);
                 const original = packagePrices[selectedPackage as AttendeePackage];
                 const final = Math.round(original * (1 - pct / 100));
@@ -900,7 +936,7 @@ export default function AdminPage() {
                   </label>
                   <select
                     value={editForm.package}
-                    onChange={(e) => setEditForm({ ...editForm, package: e.target.value, selectedSchedule: e.target.value !== "3lectures" ? "" : editForm.selectedSchedule })}
+                    onChange={(e) => setEditForm({ ...editForm, package: e.target.value, selectedSchedule: e.target.value !== "3lectures" ? "" : editForm.selectedSchedule, customEventIds: e.target.value !== "custom" ? [] : editForm.customEventIds })}
                     required
                     className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl text-base outline-none focus:border-[var(--maroon)] transition-colors bg-white"
                   >
@@ -948,8 +984,42 @@ export default function AdminPage() {
                   </div>
                 )}
 
-                {/* Payment Status — hidden for guest */}
-                {editForm.package === "guest" ? (
+                {/* Custom Event Selector */}
+                {editForm.package === "custom" && (
+                  <div className="col-span-2 max-sm:col-span-1">
+                    <label className="block text-xs text-[var(--maroon)] uppercase tracking-[1px] mb-3 font-semibold">
+                      Accessible Events
+                    </label>
+                    <div className="space-y-2">
+                      {events.map((event) => (
+                        <label
+                          key={event.id}
+                          className="flex items-center gap-3 px-4 py-3 border-2 border-gray-200 rounded-xl cursor-pointer hover:border-[var(--maroon-light)] transition-colors has-[:checked]:border-[var(--maroon)] has-[:checked]:bg-[var(--cream-light)]"
+                        >
+                          <input
+                            type="checkbox"
+                            value={event.id}
+                            checked={editForm.customEventIds.includes(event.id)}
+                            onChange={(e) => {
+                              const updated = e.target.checked
+                                ? [...editForm.customEventIds, event.id]
+                                : editForm.customEventIds.filter((id) => id !== event.id);
+                              setEditForm({ ...editForm, customEventIds: updated });
+                            }}
+                            className="accent-[var(--maroon)] w-4 h-4"
+                          />
+                          <div>
+                            <span className="text-base text-gray-800 font-medium">{event.name}</span>
+                            <span className="text-xs text-[var(--gray)] ml-2">{event.date}</span>
+                          </div>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Payment Status — hidden for guest and custom */}
+                {(editForm.package === "guest" || editForm.package === "custom") ? (
                   <input type="hidden" name="paymentStatus" value="fully_paid" />
                 ) : (
                   <div>
@@ -978,7 +1048,7 @@ export default function AdminPage() {
                 )}
 
                 {/* Balance */}
-                {editForm.package !== "guest" && editForm.paymentStatus === "partial" && (
+                {editForm.package !== "guest" && editForm.package !== "custom" && editForm.paymentStatus === "partial" && (
                   <div>
                     <label className="block text-xs text-[var(--gray)] uppercase tracking-[1px] mb-2 font-semibold">
                       Balance Due (₱)
@@ -996,7 +1066,7 @@ export default function AdminPage() {
                 )}
 
                 {/* Discount Type — hidden for guest */}
-                {editForm.package !== "guest" && (
+                {editForm.package !== "guest" && editForm.package !== "custom" && (
                   <div>
                     <label className="block text-xs text-[var(--gray)] uppercase tracking-[1px] mb-2 font-semibold">
                       Discount
@@ -1014,7 +1084,7 @@ export default function AdminPage() {
                 )}
 
                 {/* Price Preview — hidden for guest */}
-                {editForm.package && editForm.package !== "guest" && (() => {
+                {editForm.package && editForm.package !== "guest" && editForm.package !== "custom" && (() => {
                   const pct = getDiscountPercent(editForm.discountType as DiscountType, editForm.package as AttendeePackage);
                   const original = packagePrices[editForm.package as AttendeePackage];
                   const finalAmt = Math.round(original * (1 - pct / 100));
