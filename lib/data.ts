@@ -232,7 +232,7 @@ export const events: HWBEvent[] = [
     id: "lec3",
     name: "Lecture Day 3: Solvent Strategies",
     meta: "Kate Seymour",
-    venue: "Estuary Park",
+    venue: "National Library",
     date: "Apr 23",
     time: "9:00 AM – 12:00 PM",
     packages: ["3lectures", "5lectures", "full"],
