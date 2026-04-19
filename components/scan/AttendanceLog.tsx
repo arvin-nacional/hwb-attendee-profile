@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import Link from "next/link";
 import { FaUserCheck, FaTrash, FaSyncAlt, FaSearch, FaTimes } from "react-icons/fa";
 import { getEventAttendance, removeAttendance } from "@/lib/attendanceActions";
 import type { AttendanceRecord } from "@/lib/attendanceActions";
@@ -131,9 +132,12 @@ export function AttendanceLog({ eventId, eventName, refreshTrigger, expectedCoun
                   {globalIndex}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="font-semibold text-gray-800 text-sm truncate">
+                  <Link
+                    href={`/?id=${r.token}`}
+                    className="font-semibold text-gray-800 text-sm truncate hover:text-[var(--maroon)] hover:underline transition-colors block"
+                  >
                     {r.attendeeName}
-                  </div>
+                  </Link>
                   <div className="text-xs text-[var(--gray)]">
                     {r.attendeeId} · {r.checkedInAt}
                   </div>

@@ -4,11 +4,13 @@ import { connectDB } from "@/lib/mongodb";
 import { AttendanceModel } from "@/lib/models/Attendance";
 import { getAttendeeByToken, getAllAttendees } from "@/lib/actions";
 import { getAccessibleEventIds, type Attendee } from "@/lib/data";
+import { encryptId } from "@/lib/crypto";
 
 export interface AttendanceRecord {
   attendeeId: string;
   attendeeName: string;
   checkedInAt: string;
+  token: string;
 }
 
 export interface ScanResult {
@@ -85,6 +87,7 @@ export async function getEventAttendance(
         hour: "2-digit",
         minute: "2-digit",
       }),
+      token: encryptId(r.attendeeId),
     }));
   } catch (error) {
     console.error("Failed to fetch attendance:", error);
