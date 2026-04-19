@@ -17,7 +17,7 @@ import {
   FaCalendarAlt,
 } from "react-icons/fa";
 import { recordAttendance } from "@/lib/attendanceActions";
-import { packageShortNames, type AttendeePackage } from "@/lib/data";
+import { packageShortNames, paymentStatusLabels, type AttendeePackage, type PaymentStatus } from "@/lib/data";
 import type { ScanResult as ScanResultType } from "@/lib/attendanceActions";
 
 const packageIcons: Record<AttendeePackage, React.ReactNode> = {
@@ -91,6 +91,19 @@ export function ScanResult({ result, eventName, eventId, onReset, onCheckedIn }:
             {packageIcons[attendee.package]}
             {packageShortNames[attendee.package]}
           </div>
+          {attendee.package !== "guest" && attendee.package !== "custom" && (
+            <div className={`inline-flex items-center gap-1 mt-1 text-xs font-semibold px-2 py-0.5 rounded-full ${
+              attendee.paymentStatus === "fully_paid"
+                ? "bg-green-100 text-green-700"
+                : "bg-amber-100 text-amber-700"
+            }`}>
+              {attendee.paymentStatus === "fully_paid"
+                ? "Fully Paid"
+                : attendee.balance > 0
+                  ? `Balance: ₱${attendee.balance.toLocaleString("en-PH")}`
+                  : paymentStatusLabels[attendee.paymentStatus as PaymentStatus]}
+            </div>
+          )}
         </div>
         <FaExternalLinkAlt className="text-gray-300 text-xs flex-shrink-0 group-hover:text-[var(--maroon)] transition-colors" />
       </Link>
