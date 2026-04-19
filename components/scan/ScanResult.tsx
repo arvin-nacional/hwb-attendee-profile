@@ -24,6 +24,7 @@ const packageIcons: Record<AttendeePackage, React.ReactNode> = {
   "3lectures": <FaStarHalfAlt />,
   "5lectures": <FaStar />,
   full: <FaCrown />,
+  guest: <FaUserCheck />,
 };
 
 interface Props {
