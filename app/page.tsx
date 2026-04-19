@@ -17,6 +17,7 @@ import {
   FaCrown,
   FaExclamationCircle,
   FaCalendarAlt,
+  FaPassport,
 } from "react-icons/fa";
 import { getAttendeeByToken } from "@/lib/actions";
 import { events, paymentStatusLabels, discountTypeLabels, scheduleOptions, getAccessibleEventIds, type Attendee, type AttendeePackage, type PaymentStatus, type DiscountType } from "@/lib/data";
@@ -42,6 +43,10 @@ const badgeConfig: Record<
     className:
       "bg-gradient-to-br from-amber-400 to-amber-500 text-[var(--maroon-dark)]",
     icon: <FaCrown />,
+  },
+  guest: {
+    className: "bg-white/20 text-white",
+    icon: <FaPassport />,
   },
 };
 
@@ -105,12 +110,14 @@ function AttendeeProfile({
             <div className="text-sm opacity-80 mb-4 font-light">
               {attendeeId}
             </div>
+            {attendee.package !== "guest" && (
             <div
               className={`inline-flex items-center gap-2 px-4.5 py-2 rounded-lg text-sm font-bold tracking-wide ${badgeConfig[attendee.package].className}`}
             >
               {badgeConfig[attendee.package].icon}
               {attendee.packageLabel}
             </div>
+          )}
           </div>
           <div className="w-20 h-20 bg-white/15 rounded-full flex items-center justify-center text-3xl font-[family-name:var(--font-playfair)] font-bold border-3 border-white/30 flex-shrink-0 max-sm:w-15 max-sm:h-15 max-sm:text-2xl max-sm:order-first">
             {initials}
@@ -121,31 +128,35 @@ function AttendeeProfile({
         <div className="grid grid-cols-2 max-sm:grid-cols-1">
           <DetailItem label="Email" value={attendee.email} />
           <DetailItem label="Phone" value={attendee.phone} odd={false} />
-          <DetailItem
-            label="Payment Status"
-            value={
-              attendee.paymentStatus === "fully_paid" ? (
-                <span className="text-[var(--green)] font-semibold flex items-center gap-1.5">
-                  <FaCheckCircle />
-                  {paymentStatusLabels[attendee.paymentStatus as PaymentStatus] || attendee.paymentStatus}
+          {attendee.package !== "guest" && (
+            <DetailItem
+              label="Payment Status"
+              value={
+                attendee.paymentStatus === "fully_paid" ? (
+                  <span className="text-[var(--green)] font-semibold flex items-center gap-1.5">
+                    <FaCheckCircle />
+                    {paymentStatusLabels[attendee.paymentStatus as PaymentStatus] || attendee.paymentStatus}
+                  </span>
+                ) : (
+                  <span className="text-amber-600 font-semibold flex items-center gap-1.5">
+                    <FaExclamationCircle />
+                    {paymentStatusLabels[attendee.paymentStatus as PaymentStatus] || attendee.paymentStatus}
+                  </span>
+                )
+              }
+              odd={false}
+            />
+          )}
+          {attendee.package !== "guest" && (
+            <DetailItem
+              label="Package"
+              value={
+                <span className="text-[var(--maroon)] font-semibold">
+                  {attendee.packageLabel}
                 </span>
-              ) : (
-                <span className="text-amber-600 font-semibold flex items-center gap-1.5">
-                  <FaExclamationCircle />
-                  {paymentStatusLabels[attendee.paymentStatus as PaymentStatus] || attendee.paymentStatus}
-                </span>
-              )
-            }
-            odd={false}
-          />
-          <DetailItem
-            label="Package"
-            value={
-              <span className="text-[var(--maroon)] font-semibold">
-                {attendee.packageLabel}
-              </span>
-            }
-          />
+              }
+            />
+          )}
           {attendee.package === "3lectures" && attendee.selectedSchedule !== null && (
             <DetailItem
               label="Selected Schedule"
@@ -157,23 +168,25 @@ function AttendeeProfile({
               odd={false}
             />
           )}
-          <DetailItem
-            label="Amount"
-            value={
-              attendee.discountPercent > 0 ? (
-                <span className="flex items-center gap-2 flex-wrap">
-                  <span className="line-through text-[var(--gray)]">₱{attendee.originalAmount.toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span>
-                  <span className="text-[var(--maroon)] font-bold">₱{attendee.finalAmount.toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span>
-                  <span className="text-xs bg-[var(--green-bg)] text-[var(--green)] px-2 py-0.5 rounded-full font-bold">
-                    {attendee.discountPercent}% OFF — {discountTypeLabels[attendee.discountType as DiscountType] || attendee.discountType}
+          {attendee.package !== "guest" && (
+            <DetailItem
+              label="Amount"
+              value={
+                attendee.discountPercent > 0 ? (
+                  <span className="flex items-center gap-2 flex-wrap">
+                    <span className="line-through text-[var(--gray)]">₱{attendee.originalAmount.toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span>
+                    <span className="text-[var(--maroon)] font-bold">₱{attendee.finalAmount.toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span>
+                    <span className="text-xs bg-[var(--green-bg)] text-[var(--green)] px-2 py-0.5 rounded-full font-bold">
+                      {attendee.discountPercent}% OFF — {discountTypeLabels[attendee.discountType as DiscountType] || attendee.discountType}
+                    </span>
                   </span>
-                </span>
-              ) : (
-                <span className="font-semibold">₱{attendee.originalAmount.toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span>
-              )
-            }
-          />
-          {attendee.paymentStatus !== "fully_paid" && attendee.balance > 0 && (
+                ) : (
+                  <span className="font-semibold">₱{attendee.originalAmount.toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span>
+                )
+              }
+            />
+          )}
+          {attendee.package !== "guest" && attendee.paymentStatus !== "fully_paid" && attendee.balance > 0 && (
             <DetailItem
               label="Balance Due"
               value={

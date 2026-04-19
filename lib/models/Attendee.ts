@@ -28,7 +28,7 @@ const AttendeeSchema = new Schema<IAttendee>(
     package: {
       type: String,
       required: true,
-      enum: ["conference", "3lectures", "5lectures", "full"],
+      enum: ["conference", "3lectures", "5lectures", "full", "guest"],
     },
     packageLabel: { type: String, required: true },
     selectedSchedule: { type: String, default: null },

@@ -22,6 +22,7 @@ import {
   FaTimes,
   FaDownload,
   FaSpinner,
+  FaPassport,
 } from "react-icons/fa";
 import {
   addAttendee,
@@ -53,6 +54,7 @@ const packageIcons: Record<AttendeePackage, React.ReactNode> = {
   "3lectures": <FaStarHalfAlt className="text-xs" />,
   "5lectures": <FaStar className="text-xs" />,
   full: <FaCrown className="text-xs" />,
+  guest: <FaPassport className="text-xs" />,
 };
 
 function QRDownloadButton({ id, name, token }: { id: string; name: string; token: string }) {
@@ -519,34 +521,38 @@ export default function AdminPage() {
                 </div>
               )}
 
-              {/* Payment Status */}
-              <div>
-                <label className="block text-xs text-[var(--gray)] uppercase tracking-[1px] mb-2 font-semibold">
-                  Payment Status *
-                </label>
-                <select
-                  name="paymentStatus"
-                  required
-                  value={selectedPaymentStatus}
-                  onChange={(e) => setSelectedPaymentStatus(e.target.value)}
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl text-base outline-none focus:border-[var(--maroon)] transition-colors bg-white"
-                >
-                  <option value="">Select status...</option>
-                  {(
-                    Object.entries(paymentStatusLabels) as [
-                      PaymentStatus,
-                      string,
-                    ][]
-                  ).map(([value, label]) => (
-                    <option key={value} value={value}>
-                      {label}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              {/* Payment Status — hidden for guest */}
+              {selectedPackage === "guest" ? (
+                <input type="hidden" name="paymentStatus" value="fully_paid" />
+              ) : (
+                <div>
+                  <label className="block text-xs text-[var(--gray)] uppercase tracking-[1px] mb-2 font-semibold">
+                    Payment Status *
+                  </label>
+                  <select
+                    name="paymentStatus"
+                    required
+                    value={selectedPaymentStatus}
+                    onChange={(e) => setSelectedPaymentStatus(e.target.value)}
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl text-base outline-none focus:border-[var(--maroon)] transition-colors bg-white"
+                  >
+                    <option value="">Select status...</option>
+                    {(
+                      Object.entries(paymentStatusLabels) as [
+                        PaymentStatus,
+                        string,
+                      ][]
+                    ).map(([value, label]) => (
+                      <option key={value} value={value}>
+                        {label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
 
               {/* Balance */}
-              {selectedPaymentStatus === "partial" && (
+              {selectedPackage !== "guest" && selectedPaymentStatus === "partial" && (
                 <div>
                   <label className="block text-xs text-[var(--gray)] uppercase tracking-[1px] mb-2 font-semibold">
                     Balance Due (₱)
@@ -562,25 +568,27 @@ export default function AdminPage() {
                 </div>
               )}
 
-              {/* Discount Type */}
-              <div>
-                <label className="block text-xs text-[var(--gray)] uppercase tracking-[1px] mb-2 font-semibold">
-                  Discount
-                </label>
-                <select
-                  name="discountType"
-                  value={selectedDiscount}
-                  onChange={(e) => setSelectedDiscount(e.target.value)}
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl text-base outline-none focus:border-[var(--maroon)] transition-colors bg-white"
-                >
-                  {(Object.entries(discountTypeLabels) as [DiscountType, string][]).map(([value, label]) => (
-                    <option key={value} value={value}>{label}</option>
-                  ))}
-                </select>
-              </div>
+              {/* Discount Type — hidden for guest */}
+              {selectedPackage !== "guest" && (
+                <div>
+                  <label className="block text-xs text-[var(--gray)] uppercase tracking-[1px] mb-2 font-semibold">
+                    Discount
+                  </label>
+                  <select
+                    name="discountType"
+                    value={selectedDiscount}
+                    onChange={(e) => setSelectedDiscount(e.target.value)}
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl text-base outline-none focus:border-[var(--maroon)] transition-colors bg-white"
+                  >
+                    {(Object.entries(discountTypeLabels) as [DiscountType, string][]).map(([value, label]) => (
+                      <option key={value} value={value}>{label}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
 
-              {/* Price Preview */}
-              {selectedPackage && (() => {
+              {/* Price Preview — hidden for guest */}
+              {selectedPackage && selectedPackage !== "guest" && (() => {
                 const pct = getDiscountPercent(selectedDiscount as DiscountType, selectedPackage as AttendeePackage);
                 const original = packagePrices[selectedPackage as AttendeePackage];
                 const final = Math.round(original * (1 - pct / 100));
@@ -940,33 +948,37 @@ export default function AdminPage() {
                   </div>
                 )}
 
-                {/* Payment Status */}
-                <div>
-                  <label className="block text-xs text-[var(--gray)] uppercase tracking-[1px] mb-2 font-semibold">
-                    Payment Status *
-                  </label>
-                  <select
-                    value={editForm.paymentStatus}
-                    onChange={(e) => setEditForm({ ...editForm, paymentStatus: e.target.value, balance: e.target.value === "partial" ? editForm.balance : "" })}
-                    required
-                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl text-base outline-none focus:border-[var(--maroon)] transition-colors bg-white"
-                  >
-                    <option value="">Select status...</option>
-                    {(
-                      Object.entries(paymentStatusLabels) as [
-                        PaymentStatus,
-                        string,
-                      ][]
-                    ).map(([value, label]) => (
-                      <option key={value} value={value}>
-                        {label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                {/* Payment Status — hidden for guest */}
+                {editForm.package === "guest" ? (
+                  <input type="hidden" name="paymentStatus" value="fully_paid" />
+                ) : (
+                  <div>
+                    <label className="block text-xs text-[var(--gray)] uppercase tracking-[1px] mb-2 font-semibold">
+                      Payment Status *
+                    </label>
+                    <select
+                      value={editForm.paymentStatus}
+                      onChange={(e) => setEditForm({ ...editForm, paymentStatus: e.target.value, balance: e.target.value === "partial" ? editForm.balance : "" })}
+                      required
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl text-base outline-none focus:border-[var(--maroon)] transition-colors bg-white"
+                    >
+                      <option value="">Select status...</option>
+                      {(
+                        Object.entries(paymentStatusLabels) as [
+                          PaymentStatus,
+                          string,
+                        ][]
+                      ).map(([value, label]) => (
+                        <option key={value} value={value}>
+                          {label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
 
                 {/* Balance */}
-                {editForm.paymentStatus === "partial" && (
+                {editForm.package !== "guest" && editForm.paymentStatus === "partial" && (
                   <div>
                     <label className="block text-xs text-[var(--gray)] uppercase tracking-[1px] mb-2 font-semibold">
                       Balance Due (₱)
@@ -983,24 +995,26 @@ export default function AdminPage() {
                   </div>
                 )}
 
-                {/* Discount Type */}
-                <div>
-                  <label className="block text-xs text-[var(--gray)] uppercase tracking-[1px] mb-2 font-semibold">
-                    Discount
-                  </label>
-                  <select
-                    value={editForm.discountType}
-                    onChange={(e) => setEditForm({ ...editForm, discountType: e.target.value })}
-                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl text-base outline-none focus:border-[var(--maroon)] transition-colors bg-white"
-                  >
-                    {(Object.entries(discountTypeLabels) as [DiscountType, string][]).map(([value, label]) => (
-                      <option key={value} value={value}>{label}</option>
-                    ))}
-                  </select>
-                </div>
+                {/* Discount Type — hidden for guest */}
+                {editForm.package !== "guest" && (
+                  <div>
+                    <label className="block text-xs text-[var(--gray)] uppercase tracking-[1px] mb-2 font-semibold">
+                      Discount
+                    </label>
+                    <select
+                      value={editForm.discountType}
+                      onChange={(e) => setEditForm({ ...editForm, discountType: e.target.value })}
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl text-base outline-none focus:border-[var(--maroon)] transition-colors bg-white"
+                    >
+                      {(Object.entries(discountTypeLabels) as [DiscountType, string][]).map(([value, label]) => (
+                        <option key={value} value={value}>{label}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
 
-                {/* Price Preview */}
-                {editForm.package && (() => {
+                {/* Price Preview — hidden for guest */}
+                {editForm.package && editForm.package !== "guest" && (() => {
                   const pct = getDiscountPercent(editForm.discountType as DiscountType, editForm.package as AttendeePackage);
                   const original = packagePrices[editForm.package as AttendeePackage];
                   const finalAmt = Math.round(original * (1 - pct / 100));

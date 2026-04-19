@@ -20,6 +20,7 @@ import {
   FaCrown,
   FaLock,
   FaTimes,
+  FaPassport,
 } from "react-icons/fa";
 import {
   checkAdminSession,
@@ -44,6 +45,7 @@ const packageIcons: Record<AttendeePackage, React.ReactNode> = {
   "3lectures": <FaStarHalfAlt />,
   "5lectures": <FaStar />,
   full: <FaCrown />,
+  guest: <FaPassport />,
 };
 
 const packageColors: Record<AttendeePackage, string> = {
@@ -51,6 +53,7 @@ const packageColors: Record<AttendeePackage, string> = {
   "3lectures": "bg-amber-50 text-amber-800",
   "5lectures": "bg-yellow-50 text-yellow-800",
   full: "bg-[var(--cream)] text-[var(--maroon)]",
+  guest: "bg-gray-100 text-gray-700",
 };
 
 function AttendeeCard({ entry, onClose }: { entry: AttendeeEntry; onClose: () => void }) {

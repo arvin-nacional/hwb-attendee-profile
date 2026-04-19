@@ -15,7 +15,7 @@ export interface Attendee {
   notes: string;
 }
 
-export type AttendeePackage = "conference" | "3lectures" | "5lectures" | "full";
+export type AttendeePackage = "conference" | "3lectures" | "5lectures" | "full" | "guest";
 export type PaymentStatus = "fully_paid" | "downpayment_50" | "partial";
 
 export const paymentStatusLabels: Record<PaymentStatus, string> = {
@@ -29,6 +29,7 @@ export const packageLabels: Record<AttendeePackage, string> = {
   "3lectures": "HWB Package B — Conference and Choice of 3 Lectures",
   "5lectures": "HWB Package C — Conference and 5 Lectures",
   full: "HWB Full Package — Conference, 5 Lectures and Workshop",
+  guest: "Guest Pass — All Events",
 };
 
 export const packageShortNames: Record<AttendeePackage, string> = {
@@ -36,6 +37,7 @@ export const packageShortNames: Record<AttendeePackage, string> = {
   "3lectures": "Package B",
   "5lectures": "Package C",
   full: "Full Package",
+  guest: "Guest Pass",
 };
 
 export const packagePrices: Record<AttendeePackage, number> = {
@@ -43,6 +45,7 @@ export const packagePrices: Record<AttendeePackage, number> = {
   "3lectures": 4500,
   "5lectures": 5000,
   full: 35000,
+  guest: 0,
 };
 
 export type DiscountType = "none" | "senior_pwd_student" | "bulk_5" | "bulk_10";
@@ -59,6 +62,7 @@ export function getDiscountPercent(
   pkg: AttendeePackage
 ): number {
   if (discountType === "none") return 0;
+  if (pkg === "guest") return 0;
   if (pkg === "full") return 5;
   switch (discountType) {
     case "senior_pwd_student":
@@ -105,6 +109,8 @@ export function getAccessibleEventIds(attendee: Attendee): string[] {
     case "5lectures":
       return ["conf", "lec1", "lec2", "lec3", "lec4", "closing"];
     case "full":
+      return ["conf", "lec1", "lec2", "lec3", "lec4", "closing", "workshop"];
+    case "guest":
       return ["conf", "lec1", "lec2", "lec3", "lec4", "closing", "workshop"];
     default:
       return [];
@@ -259,4 +265,5 @@ export const badgeClasses: Record<AttendeePackage, string> = {
   "3lectures": "bg-gold text-maroon-dark",
   "5lectures": "bg-gradient-to-br from-gold to-gold-light text-maroon-dark",
   full: "bg-gradient-to-br from-amber-400 to-amber-500 text-maroon-dark",
+  guest: "bg-white/20 text-white",
 };
