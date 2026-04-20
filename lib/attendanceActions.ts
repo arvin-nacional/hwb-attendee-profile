@@ -84,6 +84,7 @@ export async function getEventAttendance(
       checkedInAt: new Date(r.checkedInAt).toLocaleTimeString("en-PH", {
         hour: "2-digit",
         minute: "2-digit",
+        timeZone: "Asia/Manila",
       }),
     }));
   } catch (error) {
