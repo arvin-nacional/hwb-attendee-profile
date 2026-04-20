@@ -119,7 +119,7 @@ export function AttendanceLog({ eventId, eventName, refreshTrigger, expectedCoun
       {!refreshing && paged.length > 0 && (
         <ul>
           {paged.map((r, i) => {
-            const globalIndex = (safePage - 1) * LOG_PAGE_SIZE + i + 1;
+            const globalIndex = filtered.length - ((safePage - 1) * LOG_PAGE_SIZE + i);
             return (
               <li
                 key={r.attendeeId}

@@ -76,7 +76,7 @@ export async function getEventAttendance(
   try {
     await connectDB();
     const records = await AttendanceModel.find({ eventId })
-      .sort({ checkedInAt: 1 })
+      .sort({ checkedInAt: -1 })
       .lean();
     return records.map((r) => ({
       attendeeId: r.attendeeId,
