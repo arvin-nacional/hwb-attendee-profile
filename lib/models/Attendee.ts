@@ -37,7 +37,7 @@ const AttendeeSchema = new Schema<IAttendee>(
     paymentStatus: {
       type: String,
       required: true,
-      enum: ["fully_paid", "downpayment_50", "partial"],
+      enum: ["fully_paid", "downpayment_50", "partial", "unpaid"],
     },
     discountType: {
       type: String,

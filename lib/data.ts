@@ -17,12 +17,13 @@ export interface Attendee {
 }
 
 export type AttendeePackage = "conference" | "3lectures" | "5lectures" | "full" | "guest" | "custom";
-export type PaymentStatus = "fully_paid" | "downpayment_50" | "partial";
+export type PaymentStatus = "fully_paid" | "downpayment_50" | "partial" | "unpaid";
 
 export const paymentStatusLabels: Record<PaymentStatus, string> = {
   fully_paid: "Fully Paid",
   downpayment_50: "50% Downpayment",
   partial: "Partial Payment",
+  unpaid: "Unpaid",
 };
 
 export const packageLabels: Record<AttendeePackage, string> = {

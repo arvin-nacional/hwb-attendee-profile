@@ -119,6 +119,7 @@ export async function addAttendee(formData: FormData): Promise<{
     isNoPayment ? 0 :
     effectivePaymentStatus === "fully_paid" ? 0 :
     effectivePaymentStatus === "downpayment_50" ? Math.round(finalAmount / 2) :
+    effectivePaymentStatus === "unpaid" ? finalAmount :
     (parseFloat(balanceRaw) || 0);
 
   try {
@@ -280,6 +281,7 @@ export async function updateAttendee(
     isNoPayment ? 0 :
     effectivePaymentStatus === "fully_paid" ? 0 :
     effectivePaymentStatus === "downpayment_50" ? Math.round(finalAmount / 2) :
+    effectivePaymentStatus === "unpaid" ? finalAmount :
     (parseFloat(balanceRaw) || 0);
 
   try {

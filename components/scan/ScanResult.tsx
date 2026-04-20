@@ -95,13 +95,17 @@ export function ScanResult({ result, eventName, eventId, onReset, onCheckedIn }:
             <div className={`inline-flex items-center gap-1 mt-1 text-xs font-semibold px-2 py-0.5 rounded-full ${
               attendee.paymentStatus === "fully_paid"
                 ? "bg-green-100 text-green-700"
-                : "bg-amber-100 text-amber-700"
+                : attendee.paymentStatus === "unpaid"
+                  ? "bg-red-100 text-red-700"
+                  : "bg-amber-100 text-amber-700"
             }`}>
               {attendee.paymentStatus === "fully_paid"
                 ? "Fully Paid"
-                : attendee.balance > 0
-                  ? `Balance: ₱${attendee.balance.toLocaleString("en-PH")}`
-                  : paymentStatusLabels[attendee.paymentStatus as PaymentStatus]}
+                : attendee.paymentStatus === "unpaid"
+                  ? `Unpaid — ₱${attendee.balance.toLocaleString("en-PH")}`
+                  : attendee.balance > 0
+                    ? `Balance: ₱${attendee.balance.toLocaleString("en-PH")}`
+                    : paymentStatusLabels[attendee.paymentStatus as PaymentStatus]}
             </div>
           )}
         </div>
