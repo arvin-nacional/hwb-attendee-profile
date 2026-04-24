@@ -1,9 +1,11 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { FaUserCheck, FaTrash, FaSyncAlt, FaSearch, FaTimes } from "react-icons/fa";
-import { getEventAttendance, removeAttendance } from "@/lib/attendanceActions";
+import { FaUserCheck, FaTrash, FaSyncAlt, FaSearch, FaTimes, FaFileExcel, FaSpinner } from "react-icons/fa";
+import { getEventAttendance, getEventReport, removeAttendance } from "@/lib/attendanceActions";
 import type { AttendanceRecord } from "@/lib/attendanceActions";
+import { downloadEventReportExcel } from "@/lib/excelExport";
+import type { HWBEvent } from "@/lib/data";
 
 const LOG_PAGE_SIZE = 15;
 
@@ -12,13 +14,26 @@ interface Props {
   eventName: string;
   refreshTrigger?: number;
   expectedCount?: number;
+  event?: HWBEvent;
 }
 
-export function AttendanceLog({ eventId, eventName, refreshTrigger, expectedCount }: Props) {
+export function AttendanceLog({ eventId, eventName, refreshTrigger, expectedCount, event }: Props) {
   const [records, setRecords] = useState<AttendanceRecord[]>([]);
   const [refreshing, setRefreshing] = useState(false);
+  const [exporting, setExporting] = useState(false);
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
+
+  const handleExport = useCallback(async () => {
+    if (!event) return;
+    setExporting(true);
+    try {
+      const report = await getEventReport(event.id);
+      downloadEventReportExcel(event, report);
+    } finally {
+      setExporting(false);
+    }
+  }, [event]);
 
   const load = useCallback(async () => {
     setRefreshing(true);
@@ -65,13 +80,26 @@ export function AttendanceLog({ eventId, eventName, refreshTrigger, expectedCoun
             {records.length}{expectedCount !== undefined ? `/${expectedCount}` : ""}
           </span>
         </div>
-        <button
-          onClick={load}
-          className="text-[var(--gray)] hover:text-[var(--maroon)] transition-colors text-sm"
-          title="Refresh"
-        >
-          <FaSyncAlt className={refreshing ? "animate-spin" : ""} />
-        </button>
+        <div className="flex items-center gap-1">
+          {event && (
+            <button
+              onClick={handleExport}
+              disabled={exporting}
+              className="flex items-center gap-1.5 text-xs font-semibold text-[#1d6f42] hover:bg-green-50 border border-green-200 px-2.5 py-1 rounded-lg transition-colors disabled:opacity-50"
+              title="Download attendance report as Excel"
+            >
+              {exporting ? <FaSpinner className="animate-spin text-xs" /> : <FaFileExcel className="text-xs" />}
+              {exporting ? "Preparing..." : "Excel"}
+            </button>
+          )}
+          <button
+            onClick={load}
+            className="text-[var(--gray)] hover:text-[var(--maroon)] transition-colors text-sm p-1.5"
+            title="Refresh"
+          >
+            <FaSyncAlt className={refreshing ? "animate-spin" : ""} />
+          </button>
+        </div>
       </div>
 
       {/* Search */}

@@ -201,6 +201,7 @@ export default function ScanPage() {
                 eventName={selectedEvent.name}
                 refreshTrigger={logRefresh}
                 expectedCount={expectedCounts[selectedEvent.id]}
+                event={selectedEvent}
               />
             </div>
           </div>

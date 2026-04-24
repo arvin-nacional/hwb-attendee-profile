@@ -3,7 +3,12 @@
 import { connectDB } from "@/lib/mongodb";
 import { AttendanceModel } from "@/lib/models/Attendance";
 import { getAttendeeByToken, getAllAttendees } from "@/lib/actions";
-import { getAccessibleEventIds, type Attendee } from "@/lib/data";
+import {
+  getAccessibleEventIds,
+  type Attendee,
+  type AttendeePackage,
+  type PaymentStatus,
+} from "@/lib/data";
 
 export interface AttendanceRecord {
   attendeeId: string;
@@ -122,6 +127,81 @@ export async function getNonAttendees(eventId: string): Promise<NonAttendeeRecor
       package: attendee.package,
     }))
     .sort((a, b) => a.attendeeName.localeCompare(b.attendeeName));
+}
+
+export interface EventReportAttendee {
+  attendeeId: string;
+  name: string;
+  email: string;
+  phone: string;
+  package: AttendeePackage;
+  paymentStatus: PaymentStatus;
+  balance: number;
+  checkedInAt: string | null;
+}
+
+export interface EventReport {
+  eventId: string;
+  attended: EventReportAttendee[];
+  notAttended: EventReportAttendee[];
+}
+
+export async function getEventReport(eventId: string): Promise<EventReport> {
+  const attendees = await getAllAttendees();
+  const eligible = attendees.filter(({ attendee }) =>
+    getAccessibleEventIds(attendee).includes(eventId)
+  );
+
+  const checkInMap = new Map<string, Date>();
+  try {
+    await connectDB();
+    const records = await AttendanceModel.find({ eventId })
+      .select("attendeeId checkedInAt")
+      .lean();
+    for (const r of records) {
+      checkInMap.set(r.attendeeId, new Date(r.checkedInAt));
+    }
+  } catch (error) {
+    console.error("Failed to fetch attendance for report:", error);
+  }
+
+  const formatCheckIn = (d: Date): string =>
+    d.toLocaleString("en-PH", {
+      timeZone: "Asia/Manila",
+      year: "numeric",
+      month: "short",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+
+  const attended: EventReportAttendee[] = [];
+  const notAttended: EventReportAttendee[] = [];
+
+  for (const { id, attendee } of eligible) {
+    const checkedInDate = checkInMap.get(id);
+    const entry: EventReportAttendee = {
+      attendeeId: id,
+      name: attendee.name,
+      email: attendee.email,
+      phone: attendee.phone ?? "",
+      package: attendee.package,
+      paymentStatus: attendee.paymentStatus,
+      balance: attendee.balance ?? 0,
+      checkedInAt: checkedInDate ? formatCheckIn(checkedInDate) : null,
+    };
+    if (checkedInDate) {
+      attended.push(entry);
+    } else {
+      notAttended.push(entry);
+    }
+  }
+
+  // Attended: sort by check-in time descending (latest first)
+  attended.sort((a, b) => (b.checkedInAt ?? "").localeCompare(a.checkedInAt ?? ""));
+  notAttended.sort((a, b) => a.name.localeCompare(b.name));
+
+  return { eventId, attended, notAttended };
 }
 
 export async function getExpectedCounts(): Promise<Record<string, number>> {

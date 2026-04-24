@@ -24,6 +24,7 @@ import {
   FaSpinner,
   FaPassport,
   FaCalendarAlt,
+  FaFileExcel,
 } from "react-icons/fa";
 import {
   addAttendee,
@@ -35,6 +36,7 @@ import {
   clearAdminSession,
 } from "@/lib/actions";
 import { downloadSingleQR, downloadAllQRs } from "@/lib/qrDownload";
+import { downloadAttendeesExcel } from "@/lib/excelExport";
 import {
   type Attendee,
   type AttendeePackage,
@@ -94,6 +96,29 @@ function DownloadAllButton({ attendees }: { attendees: { id: string; attendee: A
     >
       {busy ? <FaSpinner className="animate-spin" /> : <FaDownload />}
       {busy ? "Generating..." : "Download All QR Codes"}
+    </button>
+  );
+}
+
+function DownloadExcelButton({ attendees }: { attendees: { id: string; attendee: Attendee; token: string }[] }) {
+  const [busy, setBusy] = useState(false);
+  const handle = async () => {
+    setBusy(true);
+    try {
+      downloadAttendeesExcel(attendees);
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <button
+      onClick={handle}
+      disabled={busy}
+      className="flex items-center gap-2 bg-[#1d6f42] text-white text-xs font-semibold px-3 py-2 rounded-xl hover:opacity-90 transition-opacity disabled:opacity-50 cursor-pointer"
+      title="Download attendees as Excel (.xlsx) with Summary, Attendees, and By Event sheets"
+    >
+      {busy ? <FaSpinner className="animate-spin" /> : <FaFileExcel />}
+      {busy ? "Preparing..." : "Download Excel"}
     </button>
   );
 }
@@ -705,7 +730,10 @@ export default function AdminPage() {
               </span>
             </div>
             {attendeeList.length > 0 && (
-              <DownloadAllButton attendees={attendeeList} />
+              <div className="flex items-center gap-2 flex-wrap">
+                <DownloadExcelButton attendees={attendeeList} />
+                <DownloadAllButton attendees={attendeeList} />
+              </div>
             )}
           </div>
 
