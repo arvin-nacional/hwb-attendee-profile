@@ -93,6 +93,37 @@ export async function getEventAttendance(
   }
 }
 
+export interface NonAttendeeRecord {
+  attendeeId: string;
+  attendeeName: string;
+  package: string;
+}
+
+export async function getNonAttendees(eventId: string): Promise<NonAttendeeRecord[]> {
+  const attendees = await getAllAttendees();
+  const eligible = attendees.filter(({ attendee }) =>
+    getAccessibleEventIds(attendee).includes(eventId)
+  );
+
+  let checkedInIds = new Set<string>();
+  try {
+    await connectDB();
+    const records = await AttendanceModel.find({ eventId }).select("attendeeId").lean();
+    checkedInIds = new Set(records.map((r) => r.attendeeId));
+  } catch (error) {
+    console.error("Failed to fetch attendance for non-attendees:", error);
+  }
+
+  return eligible
+    .filter(({ id }) => !checkedInIds.has(id))
+    .map(({ id, attendee }) => ({
+      attendeeId: id,
+      attendeeName: attendee.name,
+      package: attendee.package,
+    }))
+    .sort((a, b) => a.attendeeName.localeCompare(b.attendeeName));
+}
+
 export async function getExpectedCounts(): Promise<Record<string, number>> {
   const attendees = await getAllAttendees();
   const counts: Record<string, number> = {};

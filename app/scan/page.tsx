@@ -10,6 +10,7 @@ import { EventSelector } from "@/components/scan/EventSelector";
 import { CameraScanner } from "@/components/scan/CameraScanner";
 import { ScanResult } from "@/components/scan/ScanResult";
 import { AttendanceLog } from "@/components/scan/AttendanceLog";
+import { NonAttendees } from "@/components/scan/NonAttendees";
 import type { ScanResult as ScanResultType } from "@/lib/attendanceActions";
 
 export default function ScanPage() {
@@ -185,6 +186,12 @@ export default function ScanPage() {
                   )}
                 </>
               )}
+
+              <NonAttendees
+                eventId={selectedEvent.id}
+                eventName={selectedEvent.name}
+                refreshTrigger={logRefresh}
+              />
             </div>
 
             {/* Right: Attendance Log */}
