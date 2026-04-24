@@ -204,6 +204,31 @@ export async function getEventReport(eventId: string): Promise<EventReport> {
   return { eventId, attended, notAttended };
 }
 
+export async function getAttendeeAttendance(
+  attendeeId: string
+): Promise<Record<string, string>> {
+  try {
+    await connectDB();
+    const records = await AttendanceModel.find({ attendeeId })
+      .select("eventId checkedInAt")
+      .lean();
+    const map: Record<string, string> = {};
+    for (const r of records) {
+      map[r.eventId] = new Date(r.checkedInAt).toLocaleString("en-PH", {
+        timeZone: "Asia/Manila",
+        month: "short",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+    }
+    return map;
+  } catch (error) {
+    console.error("Failed to fetch attendee attendance:", error);
+    return {};
+  }
+}
+
 export async function getExpectedCounts(): Promise<Record<string, number>> {
   const attendees = await getAllAttendees();
   const counts: Record<string, number> = {};

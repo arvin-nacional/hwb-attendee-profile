@@ -18,8 +18,10 @@ import {
   FaExclamationCircle,
   FaCalendarAlt,
   FaPassport,
+  FaUserCheck,
 } from "react-icons/fa";
 import { getAttendeeByToken } from "@/lib/actions";
+import { getAttendeeAttendance } from "@/lib/attendanceActions";
 import { events, paymentStatusLabels, discountTypeLabels, scheduleOptions, getAccessibleEventIds, type Attendee, type AttendeePackage, type PaymentStatus, type DiscountType } from "@/lib/data";
 
 const badgeConfig: Record<
@@ -93,10 +95,12 @@ function AttendeeProfile({
   attendee,
   attendeeId,
   token,
+  attendance,
 }: {
   attendee: Attendee;
   attendeeId: string;
   token: string;
+  attendance: Record<string, string>;
 }) {
   const initials = getInitials(attendee.name);
   const accessibleIds = getAccessibleEventIds(attendee);
@@ -212,6 +216,8 @@ function AttendeeProfile({
         </div>
         {events.map((event) => {
           const hasAccess = accessibleIds.includes(event.id);
+          const checkedInAt = attendance[event.id];
+          const attended = hasAccess && !!checkedInAt;
           return (
             <div
               key={event.id}
@@ -220,12 +226,14 @@ function AttendeeProfile({
               <div className="flex items-start gap-4">
                 <div
                   className={`w-10 h-10 rounded-full flex items-center justify-center text-sm flex-shrink-0 border-2 mt-0.5 ${
-                    hasAccess
-                      ? "bg-[var(--green-bg)] text-[var(--green)] border-green-200"
-                      : "bg-[var(--red-bg)] text-[var(--red)] border-red-200"
+                    attended
+                      ? "bg-[var(--maroon)] text-white border-[var(--maroon-dark)]"
+                      : hasAccess
+                        ? "bg-[var(--green-bg)] text-[var(--green)] border-green-200"
+                        : "bg-[var(--red-bg)] text-[var(--red)] border-red-200"
                   }`}
                 >
-                  {hasAccess ? <FaCheck /> : <FaTimes />}
+                  {attended ? <FaUserCheck /> : hasAccess ? <FaCheck /> : <FaTimes />}
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-start justify-between gap-3 max-sm:flex-col max-sm:gap-0.5">
@@ -233,13 +241,24 @@ function AttendeeProfile({
                       {event.name}
                     </div>
                     <div
-                      className={`text-xs font-bold px-3 py-1 rounded-full text-center flex-shrink-0 ${
-                        hasAccess
-                          ? "bg-[var(--green-bg)] text-[var(--green)]"
-                          : "bg-[var(--red-bg)] text-[var(--red)]"
+                      className={`text-xs font-bold px-3 py-1 rounded-full text-center flex-shrink-0 inline-flex items-center gap-1.5 ${
+                        attended
+                          ? "bg-[var(--maroon)] text-white"
+                          : hasAccess
+                            ? "bg-[var(--green-bg)] text-[var(--green)]"
+                            : "bg-[var(--red-bg)] text-[var(--red)]"
                       }`}
                     >
-                      {hasAccess ? "ACCESS" : "NO ACCESS"}
+                      {attended ? (
+                        <>
+                          <FaUserCheck className="text-[0.65rem]" />
+                          CHECKED IN
+                        </>
+                      ) : hasAccess ? (
+                        "ACCESS"
+                      ) : (
+                        "NO ACCESS"
+                      )}
                     </div>
                   </div>
                   <div className="text-xs text-[var(--gray)] mt-1">
@@ -248,6 +267,12 @@ function AttendeeProfile({
                   <div className="text-xs text-[#aaa] mt-0.5">
                     {event.meta} · {event.venue}
                   </div>
+                  {attended && (
+                    <div className="text-xs text-[var(--maroon)] font-semibold mt-1.5 flex items-center gap-1.5">
+                      <FaCheckCircle className="text-[0.7rem]" />
+                      Attended on {checkedInAt}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -308,6 +333,7 @@ function HomeContent() {
   const [attendeeId, setAttendeeId] = useState<string | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [foundAttendee, setFoundAttendee] = useState<Attendee | null>(null);
+  const [attendance, setAttendance] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [hasToken, setHasToken] = useState(false);
 
@@ -319,8 +345,11 @@ function HomeContent() {
         setAttendeeId(result.id);
         setToken(t);
         setFoundAttendee(result.attendee);
+        const attMap = await getAttendeeAttendance(result.id);
+        setAttendance(attMap);
       } else {
         setFoundAttendee(null);
+        setAttendance({});
       }
     } finally {
       setLoading(false);
@@ -362,7 +391,7 @@ function HomeContent() {
         {!loading && !hasToken && <WelcomeState />}
         {!loading && hasToken && !foundAttendee && <NotFoundState />}
         {!loading && foundAttendee && attendeeId && token && (
-          <AttendeeProfile attendee={foundAttendee} attendeeId={attendeeId} token={token} />
+          <AttendeeProfile attendee={foundAttendee} attendeeId={attendeeId} token={token} attendance={attendance} />
         )}
       </div>
     </>
