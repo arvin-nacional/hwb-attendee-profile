@@ -179,6 +179,7 @@ export async function getAttendee(id: string): Promise<Attendee | null> {
         balance: doc.balance ?? 0,
         notes: doc.notes,
         customEventIds: (doc.customEventIds as string[]) || [],
+        certificateUrl: (doc.certificateUrl as string) || "",
       };
     }
   } catch (error) {
@@ -217,6 +218,7 @@ export async function getAllAttendees(): Promise<
           balance: doc.balance ?? 0,
           notes: doc.notes,
           customEventIds: (doc.customEventIds as string[]) || [],
+          certificateUrl: (doc.certificateUrl as string) || "",
         },
       });
     }
@@ -263,6 +265,7 @@ export async function updateAttendee(
   const balanceRaw = formData.get("balance") as string;
   const notes = formData.get("notes") as string;
   const customEventIds = pkg === "custom" ? (formData.getAll("customEventIds") as string[]) : [];
+  const certificateUrl = (formData.get("certificateUrl") as string | null) ?? "";
 
   if (!name || !email || !pkg) {
     return { success: false, message: "Name, email, and package are required." };
@@ -284,6 +287,11 @@ export async function updateAttendee(
     effectivePaymentStatus === "unpaid" ? finalAmount :
     (parseFloat(balanceRaw) || 0);
 
+  const trimmedCertificateUrl = certificateUrl.trim();
+  if (trimmedCertificateUrl && !/^https?:\/\//i.test(trimmedCertificateUrl)) {
+    return { success: false, message: "Certificate URL must start with http:// or https://" };
+  }
+
   try {
     await connectDB();
 
@@ -304,6 +312,7 @@ export async function updateAttendee(
         finalAmount,
         balance,
         notes: (notes || "").trim(),
+        certificateUrl: trimmedCertificateUrl,
       },
       { new: true }
     );

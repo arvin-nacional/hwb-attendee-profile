@@ -158,6 +158,7 @@ export default function AdminPage() {
     discountType: "none" as string,
     balance: "" as string,
     notes: "",
+    certificateUrl: "",
   });
   const [editSubmitting, setEditSubmitting] = useState(false);
 
@@ -253,6 +254,7 @@ export default function AdminPage() {
       discountType: attendee.discountType || "none",
       balance: attendee.paymentStatus === "partial" ? String(attendee.balance ?? "") : "",
       notes: attendee.notes,
+      certificateUrl: attendee.certificateUrl ?? "",
     });
   }
 
@@ -276,6 +278,7 @@ export default function AdminPage() {
       formData.set("discountType", editForm.discountType);
       formData.set("balance", editForm.balance);
       formData.set("notes", editForm.notes);
+      formData.set("certificateUrl", editForm.certificateUrl);
 
       const result = await updateAttendee(editingId, formData);
       if (result.success) {
@@ -1138,6 +1141,23 @@ export default function AdminPage() {
                     </div>
                   );
                 })()}
+
+                {/* Certificate URL */}
+                <div className="col-span-2 max-sm:col-span-1">
+                  <label className="block text-xs text-[var(--gray)] uppercase tracking-[1px] mb-2 font-semibold">
+                    Certificate of Attendance URL
+                  </label>
+                  <input
+                    type="url"
+                    value={editForm.certificateUrl}
+                    onChange={(e) => setEditForm({ ...editForm, certificateUrl: e.target.value })}
+                    placeholder="https://drive.google.com/..."
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl text-base outline-none focus:border-[var(--maroon)] transition-colors"
+                  />
+                  <p className="text-xs text-[var(--gray)] mt-1.5">
+                    Paste a direct or shared link (Drive, Dropbox, etc.). Leave empty to hide the download button from the attendee&apos;s profile.
+                  </p>
+                </div>
 
                 {/* Notes */}
                 <div className="col-span-2 max-sm:col-span-1">

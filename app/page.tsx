@@ -19,6 +19,8 @@ import {
   FaCalendarAlt,
   FaPassport,
   FaUserCheck,
+  FaCertificate,
+  FaExternalLinkAlt,
 } from "react-icons/fa";
 import { getAttendeeByToken } from "@/lib/actions";
 import { getAttendeeAttendance } from "@/lib/attendanceActions";
@@ -279,6 +281,38 @@ function AttendeeProfile({
           );
         })}
       </div>
+
+      {/* Certificate of Attendance */}
+      {attendee.certificateUrl && (
+        <div className="bg-white rounded-2xl overflow-hidden shadow-[0_4px_20px_rgba(0,0,0,0.08)] mb-8">
+          <div className="bg-gradient-to-br from-[var(--maroon)] to-[var(--maroon-dark)] px-10 py-7 text-white flex items-center gap-4 max-sm:px-6 max-sm:py-6">
+            <FaCertificate className="text-3xl text-[var(--gold)] flex-shrink-0" />
+            <div className="flex-1">
+              <h2 className="font-[family-name:var(--font-playfair)] text-xl font-bold">
+                Certificate of Attendance
+              </h2>
+              <p className="text-sm opacity-80 mt-0.5">
+                Your official certificate is now available.
+              </p>
+            </div>
+          </div>
+          <div className="px-10 py-6 flex items-center justify-between gap-4 flex-wrap max-sm:px-6">
+            <p className="text-sm text-[var(--gray)] leading-relaxed flex-1 min-w-[200px]">
+              Thank you for attending Heritage Without Borders 2026. Click the button to view or download your certificate.
+            </p>
+            <a
+              href={attendee.certificateUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 bg-[var(--maroon)] text-white font-semibold text-sm px-5 py-3 rounded-xl hover:bg-[var(--maroon-dark)] transition-colors flex-shrink-0"
+            >
+              <FaCertificate />
+              View Certificate
+              <FaExternalLinkAlt className="text-xs opacity-70" />
+            </a>
+          </div>
+        </div>
+      )}
 
       {/* QR Code Section */}
       <div className="bg-white rounded-2xl overflow-hidden shadow-[0_4px_20px_rgba(0,0,0,0.08)] mb-8 p-10 flex items-center gap-10 max-sm:flex-col max-sm:text-center">

@@ -14,6 +14,7 @@ export interface Attendee {
   balance: number;
   notes: string;
   customEventIds?: string[];
+  certificateUrl?: string;
 }
 
 export type AttendeePackage = "conference" | "3lectures" | "5lectures" | "full" | "guest" | "custom";
