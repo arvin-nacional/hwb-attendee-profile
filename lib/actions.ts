@@ -180,6 +180,7 @@ export async function getAttendee(id: string): Promise<Attendee | null> {
         notes: doc.notes,
         customEventIds: (doc.customEventIds as string[]) || [],
         certificateUrl: (doc.certificateUrl as string) || "",
+        workshopCertificateUrl: (doc.workshopCertificateUrl as string) || "",
       };
     }
   } catch (error) {
@@ -219,6 +220,7 @@ export async function getAllAttendees(): Promise<
           notes: doc.notes,
           customEventIds: (doc.customEventIds as string[]) || [],
           certificateUrl: (doc.certificateUrl as string) || "",
+          workshopCertificateUrl: (doc.workshopCertificateUrl as string) || "",
         },
       });
     }
@@ -266,6 +268,8 @@ export async function updateAttendee(
   const notes = formData.get("notes") as string;
   const customEventIds = pkg === "custom" ? (formData.getAll("customEventIds") as string[]) : [];
   const certificateUrl = (formData.get("certificateUrl") as string | null) ?? "";
+  const workshopCertificateUrl =
+    (formData.get("workshopCertificateUrl") as string | null) ?? "";
 
   if (!name || !email || !pkg) {
     return { success: false, message: "Name, email, and package are required." };
@@ -292,6 +296,11 @@ export async function updateAttendee(
     return { success: false, message: "Certificate URL must start with http:// or https://" };
   }
 
+  const trimmedWorkshopCertificateUrl = workshopCertificateUrl.trim();
+  if (trimmedWorkshopCertificateUrl && !/^https?:\/\//i.test(trimmedWorkshopCertificateUrl)) {
+    return { success: false, message: "Workshop certificate URL must start with http:// or https://" };
+  }
+
   try {
     await connectDB();
 
@@ -313,6 +322,7 @@ export async function updateAttendee(
         balance,
         notes: (notes || "").trim(),
         certificateUrl: trimmedCertificateUrl,
+        workshopCertificateUrl: trimmedWorkshopCertificateUrl,
       },
       { new: true }
     );

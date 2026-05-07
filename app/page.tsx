@@ -21,10 +21,19 @@ import {
   FaUserCheck,
   FaCertificate,
   FaExternalLinkAlt,
+  FaLock,
+  FaClipboardList,
+  FaFolderOpen,
+  FaUnlock,
+  FaEdit,
+  FaSpinner,
 } from "react-icons/fa";
 import { getAttendeeByToken } from "@/lib/actions";
 import { getAttendeeAttendance } from "@/lib/attendanceActions";
-import { events, paymentStatusLabels, discountTypeLabels, scheduleOptions, getAccessibleEventIds, type Attendee, type AttendeePackage, type PaymentStatus, type DiscountType } from "@/lib/data";
+import { getFeedbackStatus, getFeedbackForAttendee, type FeedbackStatus } from "@/lib/feedbackActions";
+import { type FeedbackResponse } from "@/lib/feedback";
+import { FeedbackForm } from "@/components/profile/FeedbackForm";
+import { events, paymentStatusLabels, discountTypeLabels, scheduleOptions, getAccessibleEventIds, hasLectureAccess, LECTURE_PRESENTATIONS_URL, type Attendee, type AttendeePackage, type PaymentStatus, type DiscountType } from "@/lib/data";
 
 const badgeConfig: Record<
   AttendeePackage,
@@ -98,14 +107,45 @@ function AttendeeProfile({
   attendeeId,
   token,
   attendance,
+  feedbackStatus,
+  onFeedbackSubmitted,
 }: {
   attendee: Attendee;
   attendeeId: string;
   token: string;
   attendance: Record<string, string>;
+  feedbackStatus: FeedbackStatus;
+  onFeedbackSubmitted: () => void;
 }) {
+  const [showFeedback, setShowFeedback] = useState(false);
+  const [existingResponse, setExistingResponse] = useState<FeedbackResponse | null>(null);
+  const [loadingExisting, setLoadingExisting] = useState(false);
   const initials = getInitials(attendee.name);
   const accessibleIds = getAccessibleEventIds(attendee);
+  const hasLectureCert = !!attendee.certificateUrl;
+  const hasWorkshopCert = !!attendee.workshopCertificateUrl;
+  const hasLectures = hasLectureAccess(attendee);
+  const hasResources = hasLectureCert || hasWorkshopCert || hasLectures;
+  const resourcesUnlocked = feedbackStatus.submitted;
+
+  function openNewFeedback() {
+    setExistingResponse(null);
+    setShowFeedback(true);
+  }
+
+  async function openEditFeedback() {
+    if (loadingExisting) return;
+    setLoadingExisting(true);
+    try {
+      const response = await getFeedbackForAttendee(attendeeId);
+      setExistingResponse(response);
+      setShowFeedback(true);
+    } catch (e) {
+      console.error("Failed to load existing feedback", e);
+    } finally {
+      setLoadingExisting(false);
+    }
+  }
 
   return (
     <>
@@ -282,36 +322,129 @@ function AttendeeProfile({
         })}
       </div>
 
-      {/* Certificate of Attendance */}
-      {attendee.certificateUrl && (
+      {/* Conference Resources — gated behind feedback submission */}
+      {hasResources && (
         <div className="bg-white rounded-2xl overflow-hidden shadow-[0_4px_20px_rgba(0,0,0,0.08)] mb-8">
           <div className="bg-gradient-to-br from-[var(--maroon)] to-[var(--maroon-dark)] px-10 py-7 text-white flex items-center gap-4 max-sm:px-6 max-sm:py-6">
-            <FaCertificate className="text-3xl text-[var(--gold)] flex-shrink-0" />
+            {resourcesUnlocked ? (
+              <FaUnlock className="text-2xl text-[var(--gold)] flex-shrink-0" />
+            ) : (
+              <div className="relative flex-shrink-0">
+                <FaCertificate className="text-3xl text-[var(--gold)] opacity-50" />
+                <FaLock className="text-sm text-white absolute -bottom-1 -right-1 bg-[var(--maroon-dark)] rounded-full p-0.5" />
+              </div>
+            )}
             <div className="flex-1">
               <h2 className="font-[family-name:var(--font-playfair)] text-xl font-bold">
-                Certificate of Attendance
+                Conference Resources
               </h2>
               <p className="text-sm opacity-80 mt-0.5">
-                Your official certificate is now available.
+                {resourcesUnlocked
+                  ? "Your post-event resources are now available."
+                  : "Complete the evaluation form to unlock your post-event resources."}
               </p>
             </div>
           </div>
-          <div className="px-10 py-6 flex items-center justify-between gap-4 flex-wrap max-sm:px-6">
-            <p className="text-sm text-[var(--gray)] leading-relaxed flex-1 min-w-[200px]">
-              Thank you for attending Heritage Without Borders 2026. Click the button to view or download your certificate.
-            </p>
-            <a
-              href={attendee.certificateUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 bg-[var(--maroon)] text-white font-semibold text-sm px-5 py-3 rounded-xl hover:bg-[var(--maroon-dark)] transition-colors flex-shrink-0"
-            >
-              <FaCertificate />
-              View Certificate
-              <FaExternalLinkAlt className="text-xs opacity-70" />
-            </a>
+
+          <div className="px-10 py-6 max-sm:px-6">
+            {!resourcesUnlocked && (
+              <div className="flex items-start gap-3 px-4 py-3 rounded-xl bg-amber-50 border-2 border-amber-200 mb-5">
+                <FaClipboardList className="text-amber-600 mt-0.5 flex-shrink-0" />
+                <div className="flex-1">
+                  <p className="text-sm font-semibold text-amber-900">
+                    Evaluation Required
+                  </p>
+                  <p className="text-xs text-amber-800 leading-relaxed mt-0.5">
+                    Your feedback helps us improve future Heritage Without Borders events. Once submitted, all resources below will be available immediately.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            <div className="space-y-3">
+              {hasLectureCert && (
+                <ResourceRow
+                  icon={<FaCertificate />}
+                  title="Lecture Certificate"
+                  subtitle="Certificate of attendance for the lectures."
+                  locked={!resourcesUnlocked}
+                  actionLabel="View Certificate"
+                  actionUrl={attendee.certificateUrl}
+                />
+              )}
+              {hasWorkshopCert && (
+                <ResourceRow
+                  icon={<FaCertificate />}
+                  title="Workshop Certificate"
+                  subtitle="Certificate of completion for the workshop."
+                  locked={!resourcesUnlocked}
+                  actionLabel="View Certificate"
+                  actionUrl={attendee.workshopCertificateUrl}
+                />
+              )}
+              {hasLectures && (
+                <ResourceRow
+                  icon={<FaFolderOpen />}
+                  title="Lecture Presentations"
+                  subtitle={
+                    resourcesUnlocked
+                      ? "All lecture decks shared by speakers."
+                      : "Slide decks from all conference lectures."
+                  }
+                  locked={!resourcesUnlocked}
+                  actionLabel="Open Drive Folder"
+                  actionUrl={LECTURE_PRESENTATIONS_URL}
+                />
+              )}
+            </div>
+
+            {!resourcesUnlocked && (
+              <button
+                onClick={openNewFeedback}
+                className="mt-5 inline-flex items-center gap-2 bg-[var(--maroon)] text-white font-semibold text-sm px-5 py-3 rounded-xl hover:bg-[var(--maroon-dark)] transition-colors"
+              >
+                <FaClipboardList />
+                Take the Evaluation
+              </button>
+            )}
+
+            {resourcesUnlocked && feedbackStatus.submittedAt && (
+              <div className="mt-4 flex flex-wrap items-center gap-3">
+                <p className="text-xs text-[var(--green)] font-semibold flex items-center gap-1.5">
+                  <FaCheckCircle className="text-[0.7rem]" />
+                  Feedback submitted on {feedbackStatus.submittedAt}
+                </p>
+                <button
+                  onClick={openEditFeedback}
+                  disabled={loadingExisting}
+                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-[var(--maroon)] hover:bg-[var(--cream-light)] border-2 border-[var(--maroon)]/20 px-3 py-1.5 rounded-lg transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                  title="View or edit your previously submitted evaluation"
+                >
+                  {loadingExisting ? (
+                    <FaSpinner className="animate-spin text-[0.7rem]" />
+                  ) : (
+                    <FaEdit className="text-[0.7rem]" />
+                  )}
+                  {loadingExisting ? "Loading..." : "View / Edit Evaluation"}
+                </button>
+              </div>
+            )}
           </div>
         </div>
+      )}
+
+      {showFeedback && (
+        <FeedbackForm
+          attendeeId={attendeeId}
+          prefillName={attendee.name}
+          prefillPackage={attendee.package}
+          existingResponse={existingResponse}
+          onClose={() => setShowFeedback(false)}
+          onSubmitted={() => {
+            setShowFeedback(false);
+            onFeedbackSubmitted();
+          }}
+        />
       )}
 
       {/* QR Code Section */}
@@ -338,6 +471,67 @@ function AttendeeProfile({
         </div>
       </div>
     </>
+  );
+}
+
+function ResourceRow({
+  icon,
+  title,
+  subtitle,
+  locked,
+  actionLabel,
+  actionUrl,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  subtitle: string;
+  locked: boolean;
+  actionLabel: string;
+  actionUrl?: string;
+}) {
+  return (
+    <div
+      className={`flex items-center justify-between gap-4 px-4 py-3 rounded-xl border-2 max-sm:flex-col max-sm:items-start ${
+        locked
+          ? "bg-gray-50 border-gray-200"
+          : "bg-[var(--cream-light)] border-[var(--cream)]"
+      }`}
+    >
+      <div className="flex items-center gap-3 flex-1 min-w-0">
+        <div
+          className={`flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center text-lg ${
+            locked
+              ? "bg-gray-200 text-gray-400"
+              : "bg-[var(--maroon)] text-[var(--gold)]"
+          }`}
+        >
+          {locked ? <FaLock className="text-sm" /> : icon}
+        </div>
+        <div className="flex-1 min-w-0">
+          <p
+            className={`text-sm font-bold ${
+              locked ? "text-gray-500" : "text-[var(--maroon)]"
+            }`}
+          >
+            {title}
+          </p>
+          <p className="text-xs text-[var(--gray)] mt-0.5 leading-relaxed">
+            {subtitle}
+          </p>
+        </div>
+      </div>
+      {!locked && actionUrl && (
+        <a
+          href={actionUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-2 bg-[var(--maroon)] text-white font-semibold text-xs px-4 py-2.5 rounded-lg hover:bg-[var(--maroon-dark)] transition-colors flex-shrink-0 max-sm:w-full max-sm:justify-center"
+        >
+          {actionLabel}
+          <FaExternalLinkAlt className="text-[0.65rem] opacity-70" />
+        </a>
+      )}
+    </div>
   );
 }
 
@@ -368,8 +562,14 @@ function HomeContent() {
   const [token, setToken] = useState<string | null>(null);
   const [foundAttendee, setFoundAttendee] = useState<Attendee | null>(null);
   const [attendance, setAttendance] = useState<Record<string, string>>({});
+  const [feedbackStatus, setFeedbackStatus] = useState<FeedbackStatus>({ submitted: false });
   const [loading, setLoading] = useState(true);
   const [hasToken, setHasToken] = useState(false);
+
+  const refreshFeedback = useCallback(async (id: string) => {
+    const status = await getFeedbackStatus(id);
+    setFeedbackStatus(status);
+  }, []);
 
   const lookupByToken = useCallback(async (t: string) => {
     setLoading(true);
@@ -379,11 +579,16 @@ function HomeContent() {
         setAttendeeId(result.id);
         setToken(t);
         setFoundAttendee(result.attendee);
-        const attMap = await getAttendeeAttendance(result.id);
+        const [attMap, fbStatus] = await Promise.all([
+          getAttendeeAttendance(result.id),
+          getFeedbackStatus(result.id),
+        ]);
         setAttendance(attMap);
+        setFeedbackStatus(fbStatus);
       } else {
         setFoundAttendee(null);
         setAttendance({});
+        setFeedbackStatus({ submitted: false });
       }
     } finally {
       setLoading(false);
@@ -425,7 +630,14 @@ function HomeContent() {
         {!loading && !hasToken && <WelcomeState />}
         {!loading && hasToken && !foundAttendee && <NotFoundState />}
         {!loading && foundAttendee && attendeeId && token && (
-          <AttendeeProfile attendee={foundAttendee} attendeeId={attendeeId} token={token} attendance={attendance} />
+          <AttendeeProfile
+            attendee={foundAttendee}
+            attendeeId={attendeeId}
+            token={token}
+            attendance={attendance}
+            feedbackStatus={feedbackStatus}
+            onFeedbackSubmitted={() => refreshFeedback(attendeeId)}
+          />
         )}
       </div>
     </>

@@ -14,6 +14,14 @@ import {
   getAccessibleEventIds,
 } from "@/lib/data";
 import type { EventReport, EventReportAttendee } from "@/lib/attendanceActions";
+import type { FeedbackResponse } from "@/lib/feedback";
+import {
+  SPEAKERS,
+  EVENT_EXPERIENCE_ITEMS,
+  SERVICE_EXPERIENCE_ITEMS,
+  SPEAKER_RATINGS,
+  FIVE_POINT_LABELS,
+} from "@/lib/feedback";
 
 type AttendeeRecord = { id: string; attendee: Attendee; token: string };
 
@@ -460,4 +468,184 @@ export function downloadEventReportExcel(
 
   const eventSlug = sanitizeFilename(event.id.toUpperCase());
   XLSX.writeFile(wb, `HWB-2026-${eventSlug}-Attendance_${stamp}.xlsx`);
+}
+
+// ─── Feedback Responses Export ─────────────────────────────────────────────
+
+function speakerRatingLabel(value: string): string {
+  return SPEAKER_RATINGS.find((r) => r.value === value)?.label ?? value;
+}
+
+function fivePointLabel(value: number): string {
+  return value > 0 ? `${value} — ${FIVE_POINT_LABELS[value] ?? ""}` : "";
+}
+
+function fmtSubmittedAt(iso: string): string {
+  return new Date(iso).toLocaleString("en-PH", {
+    timeZone: "Asia/Manila",
+    year: "numeric",
+    month: "short",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function buildFeedbackResponsesSheet(
+  responses: FeedbackResponse[]
+): XLSX.WorkSheet {
+  const rows = responses.map((r, i) => {
+    const row: Record<string, string | number> = {
+      "#": i + 1,
+      "Attendee ID": r.attendeeId,
+      "Submitted At": fmtSubmittedAt(r.submittedAt),
+      "Name": r.name,
+      "Field of Work": r.fieldOfWork === "Other" ? `Other: ${r.fieldOfWorkOther}` : r.fieldOfWork,
+      "Occupation / Role": r.occupationRole,
+      "Affiliation": r.affiliation,
+      "Heard About": r.hearAbout === "Other" ? `Other: ${r.hearAboutOther}` : r.hearAbout,
+      "Package Availed": r.packageAvailed,
+    };
+    for (const s of SPEAKERS) {
+      row[`Speaker — ${s.name}`] = speakerRatingLabel(r.speakerRatings[s.id] ?? "");
+    }
+    row["Speaker Comments"] = r.speakerComments;
+    row["Conference Topics (1-5)"] = fivePointLabel(r.conferenceTopicsRating);
+    for (const item of EVENT_EXPERIENCE_ITEMS) {
+      row[`Event — ${item.label}`] = fivePointLabel(r.eventExperience[item.id] ?? 0);
+    }
+    for (const item of SERVICE_EXPERIENCE_ITEMS) {
+      row[`Service — ${item.label}`] = fivePointLabel(r.serviceExperience[item.id] ?? 0);
+    }
+    row["Overall Experience (1-5)"] = fivePointLabel(r.overallExperience);
+    row["Improvements"] = r.improvements;
+    return row;
+  });
+
+  if (rows.length === 0) {
+    const emptyRow: Record<string, string | number> = {
+      "#": "",
+      "Attendee ID": "",
+      "Submitted At": "",
+      "Name": "(No feedback submitted yet)",
+    };
+    const ws = XLSX.utils.json_to_sheet([emptyRow]);
+    ws["!cols"] = [{ wch: 4 }, { wch: 15 }, { wch: 18 }, { wch: 30 }];
+    return ws;
+  }
+
+  const headers = Object.keys(rows[0]);
+  const ws = XLSX.utils.json_to_sheet(rows, { header: headers });
+  ws["!cols"] = autoFitColumns(
+    rows as unknown as Record<string, unknown>[],
+    headers
+  );
+  return ws;
+}
+
+function avg(nums: number[]): number {
+  const valid = nums.filter((n) => n > 0);
+  if (valid.length === 0) return 0;
+  return valid.reduce((a, b) => a + b, 0) / valid.length;
+}
+
+function speakerScoreToNum(value: string): number {
+  // good=1, very_good=2, excellent=3
+  if (value === "good") return 1;
+  if (value === "very_good") return 2;
+  if (value === "excellent") return 3;
+  return 0;
+}
+
+function buildFeedbackSummarySheet(
+  responses: FeedbackResponse[]
+): XLSX.WorkSheet {
+  const total = responses.length;
+
+  const aoa: (string | number)[][] = [
+    ["Heritage Without Borders 2026 — Feedback Summary"],
+    [`Generated: ${phDate()} (Asia/Manila)`],
+    [],
+    ["Total Responses", total],
+    [],
+  ];
+
+  if (total === 0) {
+    aoa.push(["No feedback submitted yet."]);
+    const ws = XLSX.utils.aoa_to_sheet(aoa);
+    ws["!cols"] = [{ wch: 42 }, { wch: 14 }];
+    return ws;
+  }
+
+  // Speaker average ratings (1-3 scale)
+  aoa.push(["Speaker Ratings (avg 1=Good, 3=Excellent)"]);
+  aoa.push(["Speaker", "Average Score", "Distribution"]);
+  for (const s of SPEAKERS) {
+    const scores = responses.map((r) => speakerScoreToNum(r.speakerRatings[s.id] ?? ""));
+    const a = avg(scores);
+    const dist: Record<string, number> = { good: 0, very_good: 0, excellent: 0 };
+    for (const r of responses) {
+      const v = r.speakerRatings[s.id];
+      if (v && dist[v] !== undefined) dist[v]++;
+    }
+    const distStr = `Good: ${dist.good} · Very Good: ${dist.very_good} · Excellent: ${dist.excellent}`;
+    aoa.push([s.name, a > 0 ? a.toFixed(2) : "—", distStr]);
+  }
+  aoa.push([]);
+
+  // Conference topics
+  const ctScores = responses.map((r) => r.conferenceTopicsRating);
+  aoa.push(["Conference Topics Rating (avg 1-5)", avg(ctScores).toFixed(2)]);
+  aoa.push([]);
+
+  // Event experience
+  aoa.push(["Event Experience (avg 1-5)"]);
+  aoa.push(["Aspect", "Average"]);
+  for (const item of EVENT_EXPERIENCE_ITEMS) {
+    const scores = responses.map((r) => r.eventExperience[item.id] ?? 0);
+    aoa.push([item.label, avg(scores).toFixed(2)]);
+  }
+  aoa.push([]);
+
+  // Service experience
+  aoa.push(["Service Experience (avg 1-5)"]);
+  aoa.push(["Service", "Average"]);
+  for (const item of SERVICE_EXPERIENCE_ITEMS) {
+    const scores = responses.map((r) => r.serviceExperience[item.id] ?? 0);
+    aoa.push([item.label, avg(scores).toFixed(2)]);
+  }
+  aoa.push([]);
+
+  // Overall
+  const overall = responses.map((r) => r.overallExperience);
+  aoa.push(["Overall Conference Experience (avg 1-5)", avg(overall).toFixed(2)]);
+
+  const ws = XLSX.utils.aoa_to_sheet(aoa);
+  ws["!merges"] = [
+    { s: { r: 0, c: 0 }, e: { r: 0, c: 2 } },
+    { s: { r: 1, c: 0 }, e: { r: 1, c: 2 } },
+  ];
+  ws["!cols"] = [{ wch: 42 }, { wch: 14 }, { wch: 50 }];
+  return ws;
+}
+
+export function downloadFeedbackExcel(responses: FeedbackResponse[]): void {
+  const wb = XLSX.utils.book_new();
+
+  XLSX.utils.book_append_sheet(wb, buildFeedbackSummarySheet(responses), "Summary");
+  XLSX.utils.book_append_sheet(wb, buildFeedbackResponsesSheet(responses), "Responses");
+
+  const stamp = new Date()
+    .toLocaleString("en-PH", {
+      timeZone: "Asia/Manila",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    })
+    .replace(/[\/:,\s]+/g, "-");
+
+  XLSX.writeFile(wb, `HWB-2026-Feedback_${stamp}.xlsx`);
 }

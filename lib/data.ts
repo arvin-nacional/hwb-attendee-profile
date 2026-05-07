@@ -15,6 +15,7 @@ export interface Attendee {
   notes: string;
   customEventIds?: string[];
   certificateUrl?: string;
+  workshopCertificateUrl?: string;
 }
 
 export type AttendeePackage = "conference" | "3lectures" | "5lectures" | "full" | "guest" | "custom";
@@ -102,6 +103,19 @@ export const scheduleOptions: { value: ScheduleOption; label: string; eventIds: 
   { value: "2,4,5", label: "Lecture Days 2, 4, and 5", eventIds: ["lec2", "lec4", "closing"] },
   { value: "3,4,5", label: "Lecture Days 3, 4, and 5", eventIds: ["lec3", "lec4", "closing"] },
 ];
+
+// Shared Google Drive folder containing all lecture presentations.
+// Available to attendees who have access to at least one lecture event,
+// gated behind feedback submission.
+export const LECTURE_PRESENTATIONS_URL =
+  "https://drive.google.com/drive/folders/1MJFFRxdB63JQfQJ9L78T07vOn0hurUIP?usp=sharing";
+
+const LECTURE_EVENT_IDS = ["lec1", "lec2", "lec3", "lec4", "closing"] as const;
+
+export function hasLectureAccess(attendee: Attendee): boolean {
+  const accessible = getAccessibleEventIds(attendee);
+  return LECTURE_EVENT_IDS.some((id) => accessible.includes(id));
+}
 
 export function getAccessibleEventIds(attendee: Attendee): string[] {
   switch (attendee.package) {

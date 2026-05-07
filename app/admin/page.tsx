@@ -36,7 +36,9 @@ import {
   clearAdminSession,
 } from "@/lib/actions";
 import { downloadSingleQR, downloadAllQRs } from "@/lib/qrDownload";
-import { downloadAttendeesExcel } from "@/lib/excelExport";
+import { downloadAttendeesExcel, downloadFeedbackExcel } from "@/lib/excelExport";
+import { getAllFeedback, getFeedbackStatus, resetFeedback, type FeedbackStatus } from "@/lib/feedbackActions";
+import { FaClipboardList, FaUndoAlt } from "react-icons/fa";
 import {
   type Attendee,
   type AttendeePackage,
@@ -123,6 +125,30 @@ function DownloadExcelButton({ attendees }: { attendees: { id: string; attendee:
   );
 }
 
+function DownloadFeedbackButton() {
+  const [busy, setBusy] = useState(false);
+  const handle = async () => {
+    setBusy(true);
+    try {
+      const responses = await getAllFeedback();
+      downloadFeedbackExcel(responses);
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <button
+      onClick={handle}
+      disabled={busy}
+      className="flex items-center gap-2 bg-[var(--maroon)] text-white text-xs font-semibold px-3 py-2 rounded-xl hover:opacity-90 transition-opacity disabled:opacity-50 cursor-pointer"
+      title="Download feedback responses as Excel (.xlsx) with Summary and Responses sheets"
+    >
+      {busy ? <FaSpinner className="animate-spin" /> : <FaClipboardList />}
+      {busy ? "Preparing..." : "Feedback Excel"}
+    </button>
+  );
+}
+
 export default function AdminPage() {
   const [authenticated, setAuthenticated] = useState(false);
   const [sessionChecking, setSessionChecking] = useState(true);
@@ -147,6 +173,8 @@ export default function AdminPage() {
   } | null>(null);
 
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [editFeedbackStatus, setEditFeedbackStatus] = useState<FeedbackStatus>({ submitted: false });
+  const [feedbackResetting, setFeedbackResetting] = useState(false);
   const [editForm, setEditForm] = useState({
     name: "",
     email: "",
@@ -159,6 +187,7 @@ export default function AdminPage() {
     balance: "" as string,
     notes: "",
     certificateUrl: "",
+    workshopCertificateUrl: "",
   });
   const [editSubmitting, setEditSubmitting] = useState(false);
 
@@ -241,8 +270,10 @@ export default function AdminPage() {
     }
   }
 
-  function openEditModal(id: string, attendee: Attendee) {
+  async function openEditModal(id: string, attendee: Attendee) {
     setEditingId(id);
+    setEditFeedbackStatus({ submitted: false });
+    getFeedbackStatus(id).then(setEditFeedbackStatus);
     setEditForm({
       name: attendee.name,
       email: attendee.email,
@@ -255,6 +286,7 @@ export default function AdminPage() {
       balance: attendee.paymentStatus === "partial" ? String(attendee.balance ?? "") : "",
       notes: attendee.notes,
       certificateUrl: attendee.certificateUrl ?? "",
+      workshopCertificateUrl: attendee.workshopCertificateUrl ?? "",
     });
   }
 
@@ -279,6 +311,7 @@ export default function AdminPage() {
       formData.set("balance", editForm.balance);
       formData.set("notes", editForm.notes);
       formData.set("certificateUrl", editForm.certificateUrl);
+      formData.set("workshopCertificateUrl", editForm.workshopCertificateUrl);
 
       const result = await updateAttendee(editingId, formData);
       if (result.success) {
@@ -735,6 +768,7 @@ export default function AdminPage() {
             {attendeeList.length > 0 && (
               <div className="flex items-center gap-2 flex-wrap">
                 <DownloadExcelButton attendees={attendeeList} />
+                <DownloadFeedbackButton />
                 <DownloadAllButton attendees={attendeeList} />
               </div>
             )}
@@ -1142,10 +1176,58 @@ export default function AdminPage() {
                   );
                 })()}
 
-                {/* Certificate URL */}
+                {/* Feedback status */}
                 <div className="col-span-2 max-sm:col-span-1">
                   <label className="block text-xs text-[var(--gray)] uppercase tracking-[1px] mb-2 font-semibold">
-                    Certificate of Attendance URL
+                    Evaluation Feedback
+                  </label>
+                  {editFeedbackStatus.submitted ? (
+                    <div className="flex items-center justify-between gap-3 px-4 py-3 rounded-xl bg-[var(--green-bg)] border-2 border-green-200 flex-wrap">
+                      <div className="flex items-center gap-2 text-sm text-[var(--green)] font-semibold">
+                        <FaCheckCircle />
+                        Submitted on {editFeedbackStatus.submittedAt}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          if (!editingId) return;
+                          if (!confirm("Reset this attendee's feedback? They will need to submit again to access their certificate.")) return;
+                          setFeedbackResetting(true);
+                          try {
+                            const result = await resetFeedback(editingId);
+                            if (result.success) {
+                              setEditFeedbackStatus({ submitted: false });
+                            } else {
+                              alert(result.message);
+                            }
+                          } finally {
+                            setFeedbackResetting(false);
+                          }
+                        }}
+                        disabled={feedbackResetting}
+                        className="flex items-center gap-1.5 text-xs font-semibold text-amber-700 hover:bg-amber-50 border border-amber-300 px-2.5 py-1.5 rounded-lg transition-colors disabled:opacity-50"
+                        title="Reset feedback so attendee can submit again"
+                      >
+                        {feedbackResetting ? (
+                          <FaSpinner className="animate-spin text-xs" />
+                        ) : (
+                          <FaUndoAlt className="text-xs" />
+                        )}
+                        Reset
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2 px-4 py-3 rounded-xl bg-amber-50 border-2 border-amber-200 text-sm text-amber-900">
+                      <FaClipboardList className="text-amber-600 flex-shrink-0" />
+                      <span>Not yet submitted. Certificate stays locked until evaluation is completed.</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Lecture Certificate URL */}
+                <div className="col-span-2 max-sm:col-span-1">
+                  <label className="block text-xs text-[var(--gray)] uppercase tracking-[1px] mb-2 font-semibold">
+                    Lecture Certificate URL
                   </label>
                   <input
                     type="url"
@@ -1155,7 +1237,26 @@ export default function AdminPage() {
                     className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl text-base outline-none focus:border-[var(--maroon)] transition-colors"
                   />
                   <p className="text-xs text-[var(--gray)] mt-1.5">
-                    Paste a direct or shared link (Drive, Dropbox, etc.). Leave empty to hide the download button from the attendee&apos;s profile.
+                    Paste a direct or shared link. Leave empty to hide the lecture certificate from the attendee&apos;s profile.
+                  </p>
+                </div>
+
+                {/* Workshop Certificate URL */}
+                <div className="col-span-2 max-sm:col-span-1">
+                  <label className="block text-xs text-[var(--gray)] uppercase tracking-[1px] mb-2 font-semibold">
+                    Workshop Certificate URL
+                  </label>
+                  <input
+                    type="url"
+                    value={editForm.workshopCertificateUrl}
+                    onChange={(e) =>
+                      setEditForm({ ...editForm, workshopCertificateUrl: e.target.value })
+                    }
+                    placeholder="https://drive.google.com/..."
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl text-base outline-none focus:border-[var(--maroon)] transition-colors"
+                  />
+                  <p className="text-xs text-[var(--gray)] mt-1.5">
+                    Paste a direct or shared link. Leave empty to hide the workshop certificate from the attendee&apos;s profile.
                   </p>
                 </div>
 
