@@ -181,6 +181,7 @@ export async function getAttendee(id: string): Promise<Attendee | null> {
         customEventIds: (doc.customEventIds as string[]) || [],
         certificateUrl: (doc.certificateUrl as string) || "",
         workshopCertificateUrl: (doc.workshopCertificateUrl as string) || "",
+        conferenceCertificateUrl: (doc.conferenceCertificateUrl as string) || "",
       };
     }
   } catch (error) {
@@ -221,6 +222,7 @@ export async function getAllAttendees(): Promise<
           customEventIds: (doc.customEventIds as string[]) || [],
           certificateUrl: (doc.certificateUrl as string) || "",
           workshopCertificateUrl: (doc.workshopCertificateUrl as string) || "",
+          conferenceCertificateUrl: (doc.conferenceCertificateUrl as string) || "",
         },
       });
     }
@@ -270,6 +272,8 @@ export async function updateAttendee(
   const certificateUrl = (formData.get("certificateUrl") as string | null) ?? "";
   const workshopCertificateUrl =
     (formData.get("workshopCertificateUrl") as string | null) ?? "";
+  const conferenceCertificateUrl =
+    (formData.get("conferenceCertificateUrl") as string | null) ?? "";
 
   if (!name || !email || !pkg) {
     return { success: false, message: "Name, email, and package are required." };
@@ -301,6 +305,11 @@ export async function updateAttendee(
     return { success: false, message: "Workshop certificate URL must start with http:// or https://" };
   }
 
+  const trimmedConferenceCertificateUrl = conferenceCertificateUrl.trim();
+  if (trimmedConferenceCertificateUrl && !/^https?:\/\//i.test(trimmedConferenceCertificateUrl)) {
+    return { success: false, message: "Conference certificate URL must start with http:// or https://" };
+  }
+
   try {
     await connectDB();
 
@@ -323,6 +332,7 @@ export async function updateAttendee(
         notes: (notes || "").trim(),
         certificateUrl: trimmedCertificateUrl,
         workshopCertificateUrl: trimmedWorkshopCertificateUrl,
+        conferenceCertificateUrl: trimmedConferenceCertificateUrl,
       },
       { new: true }
     );

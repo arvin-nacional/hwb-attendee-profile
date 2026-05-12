@@ -188,6 +188,7 @@ export default function AdminPage() {
     notes: "",
     certificateUrl: "",
     workshopCertificateUrl: "",
+    conferenceCertificateUrl: "",
   });
   const [editSubmitting, setEditSubmitting] = useState(false);
 
@@ -287,6 +288,7 @@ export default function AdminPage() {
       notes: attendee.notes,
       certificateUrl: attendee.certificateUrl ?? "",
       workshopCertificateUrl: attendee.workshopCertificateUrl ?? "",
+      conferenceCertificateUrl: attendee.conferenceCertificateUrl ?? "",
     });
   }
 
@@ -312,6 +314,7 @@ export default function AdminPage() {
       formData.set("notes", editForm.notes);
       formData.set("certificateUrl", editForm.certificateUrl);
       formData.set("workshopCertificateUrl", editForm.workshopCertificateUrl);
+      formData.set("conferenceCertificateUrl", editForm.conferenceCertificateUrl);
 
       const result = await updateAttendee(editingId, formData);
       if (result.success) {
@@ -1222,6 +1225,25 @@ export default function AdminPage() {
                       <span>Not yet submitted. Certificate stays locked until evaluation is completed.</span>
                     </div>
                   )}
+                </div>
+
+                {/* Conference Certificate URL */}
+                <div className="col-span-2 max-sm:col-span-1">
+                  <label className="block text-xs text-[var(--gray)] uppercase tracking-[1px] mb-2 font-semibold">
+                    Conference Certificate URL
+                  </label>
+                  <input
+                    type="url"
+                    value={editForm.conferenceCertificateUrl}
+                    onChange={(e) =>
+                      setEditForm({ ...editForm, conferenceCertificateUrl: e.target.value })
+                    }
+                    placeholder="https://drive.google.com/..."
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl text-base outline-none focus:border-[var(--maroon)] transition-colors"
+                  />
+                  <p className="text-xs text-[var(--gray)] mt-1.5">
+                    Paste a direct or shared link. Leave empty to hide the conference certificate from the attendee&apos;s profile.
+                  </p>
                 </div>
 
                 {/* Lecture Certificate URL */}

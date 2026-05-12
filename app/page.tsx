@@ -122,10 +122,11 @@ function AttendeeProfile({
   const [loadingExisting, setLoadingExisting] = useState(false);
   const initials = getInitials(attendee.name);
   const accessibleIds = getAccessibleEventIds(attendee);
+  const hasConferenceCert = !!attendee.conferenceCertificateUrl;
   const hasLectureCert = !!attendee.certificateUrl;
   const hasWorkshopCert = !!attendee.workshopCertificateUrl;
   const hasLectures = hasLectureAccess(attendee);
-  const hasResources = hasLectureCert || hasWorkshopCert || hasLectures;
+  const hasResources = hasConferenceCert || hasLectureCert || hasWorkshopCert || hasLectures;
   const resourcesUnlocked = feedbackStatus.submitted;
 
   function openNewFeedback() {
@@ -362,6 +363,16 @@ function AttendeeProfile({
             )}
 
             <div className="space-y-3">
+              {hasConferenceCert && (
+                <ResourceRow
+                  icon={<FaCertificate />}
+                  title="Conference Certificate"
+                  subtitle="Certificate of attendance for the conference."
+                  locked={!resourcesUnlocked}
+                  actionLabel="View Certificate"
+                  actionUrl={attendee.conferenceCertificateUrl}
+                />
+              )}
               {hasLectureCert && (
                 <ResourceRow
                   icon={<FaCertificate />}

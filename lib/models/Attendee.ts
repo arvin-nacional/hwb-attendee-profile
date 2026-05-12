@@ -20,6 +20,7 @@ export interface IAttendee extends Document {
   customEventIds?: string[];
   certificateUrl?: string;
   workshopCertificateUrl?: string;
+  conferenceCertificateUrl?: string;
 }
 
 const AttendeeSchema = new Schema<IAttendee>(
@@ -54,6 +55,7 @@ const AttendeeSchema = new Schema<IAttendee>(
     customEventIds: { type: [String], default: [] },
     certificateUrl: { type: String, default: "" },
     workshopCertificateUrl: { type: String, default: "" },
+    conferenceCertificateUrl: { type: String, default: "" },
   },
   { timestamps: true }
 );

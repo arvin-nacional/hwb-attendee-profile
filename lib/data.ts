@@ -16,6 +16,7 @@ export interface Attendee {
   customEventIds?: string[];
   certificateUrl?: string;
   workshopCertificateUrl?: string;
+  conferenceCertificateUrl?: string;
 }
 
 export type AttendeePackage = "conference" | "3lectures" | "5lectures" | "full" | "guest" | "custom";
