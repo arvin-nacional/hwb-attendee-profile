@@ -21,6 +21,7 @@ export interface IAttendee extends Document {
   certificateUrl?: string;
   workshopCertificateUrl?: string;
   conferenceCertificateUrl?: string;
+  lastEmailSentAt?: Date | null;
 }
 
 const AttendeeSchema = new Schema<IAttendee>(
@@ -56,6 +57,7 @@ const AttendeeSchema = new Schema<IAttendee>(
     certificateUrl: { type: String, default: "" },
     workshopCertificateUrl: { type: String, default: "" },
     conferenceCertificateUrl: { type: String, default: "" },
+    lastEmailSentAt: { type: Date, default: null },
   },
   { timestamps: true }
 );

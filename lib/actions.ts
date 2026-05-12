@@ -182,6 +182,9 @@ export async function getAttendee(id: string): Promise<Attendee | null> {
         certificateUrl: (doc.certificateUrl as string) || "",
         workshopCertificateUrl: (doc.workshopCertificateUrl as string) || "",
         conferenceCertificateUrl: (doc.conferenceCertificateUrl as string) || "",
+        lastEmailSentAt: doc.lastEmailSentAt
+          ? (doc.lastEmailSentAt as Date).toISOString()
+          : null,
       };
     }
   } catch (error) {
@@ -223,6 +226,9 @@ export async function getAllAttendees(): Promise<
           certificateUrl: (doc.certificateUrl as string) || "",
           workshopCertificateUrl: (doc.workshopCertificateUrl as string) || "",
           conferenceCertificateUrl: (doc.conferenceCertificateUrl as string) || "",
+          lastEmailSentAt: doc.lastEmailSentAt
+            ? (doc.lastEmailSentAt as Date).toISOString()
+            : null,
         },
       });
     }

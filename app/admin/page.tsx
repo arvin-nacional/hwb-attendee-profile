@@ -25,6 +25,8 @@ import {
   FaPassport,
   FaCalendarAlt,
   FaFileExcel,
+  FaEnvelope,
+  FaPaperPlane,
 } from "react-icons/fa";
 import {
   addAttendee,
@@ -38,6 +40,7 @@ import {
 import { downloadSingleQR, downloadAllQRs } from "@/lib/qrDownload";
 import { downloadAttendeesExcel, downloadFeedbackExcel } from "@/lib/excelExport";
 import { getAllFeedback, getFeedbackStatus, resetFeedback, type FeedbackStatus } from "@/lib/feedbackActions";
+import { sendThankYouEmail, sendBulkThankYouEmails } from "@/lib/emailActions";
 import { FaClipboardList, FaUndoAlt } from "react-icons/fa";
 import {
   type Attendee,
@@ -146,6 +149,189 @@ function DownloadFeedbackButton() {
       {busy ? <FaSpinner className="animate-spin" /> : <FaClipboardList />}
       {busy ? "Preparing..." : "Feedback Excel"}
     </button>
+  );
+}
+
+function formatLastSent(iso: string | null | undefined): string | null {
+  if (!iso) return null;
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return null;
+  return d.toLocaleString(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
+function SendEmailButton({
+  id,
+  name,
+  email,
+  lastEmailSentAt,
+  onSent,
+  onError,
+}: {
+  id: string;
+  name: string;
+  email: string;
+  lastEmailSentAt?: string | null;
+  onSent: (id: string, when: string) => void;
+  onError: (msg: string) => void;
+}) {
+  const [busy, setBusy] = useState(false);
+  const formattedSent = formatLastSent(lastEmailSentAt);
+
+  const handle = async () => {
+    if (busy) return;
+    if (!email?.trim()) {
+      onError(`${name} has no email address.`);
+      return;
+    }
+    if (
+      lastEmailSentAt &&
+      !confirm(
+        `${name} was already emailed on ${formattedSent ?? "an earlier date"}. Send the thank-you email again?`
+      )
+    ) {
+      return;
+    }
+    setBusy(true);
+    try {
+      const result = await sendThankYouEmail(id);
+      if (result.success) {
+        onSent(id, new Date().toISOString());
+      } else {
+        onError(result.message);
+      }
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const tone = lastEmailSentAt
+    ? "text-[var(--green)] hover:text-[var(--green)]"
+    : "text-gray-300 hover:text-[var(--maroon)]";
+
+  return (
+    <button
+      onClick={handle}
+      disabled={busy}
+      className={`${tone} transition-colors p-2 cursor-pointer rounded-lg hover:bg-gray-50 disabled:opacity-50`}
+      title={
+        busy
+          ? "Sending..."
+          : lastEmailSentAt
+            ? `Resend thank-you email (last sent ${formattedSent})`
+            : "Send thank-you email"
+      }
+    >
+      {busy ? <FaSpinner className="text-sm animate-spin" /> : <FaEnvelope className="text-sm" />}
+    </button>
+  );
+}
+
+function SendAllEmailsButton({
+  attendeeCount,
+  onComplete,
+  onMessage,
+}: {
+  attendeeCount: number;
+  onComplete: () => void;
+  onMessage: (msg: { type: "success" | "error"; text: string }) => void;
+}) {
+  const [busy, setBusy] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [skipAlreadySent, setSkipAlreadySent] = useState(true);
+
+  const run = async () => {
+    setBusy(true);
+    setConfirmOpen(false);
+    try {
+      const result = await sendBulkThankYouEmails({ skipAlreadySent });
+      if (result.success) {
+        onMessage({
+          type: "success",
+          text: `${result.message}${result.skipped ? ` (${result.skipped} skipped without email)` : ""}`,
+        });
+      } else {
+        onMessage({
+          type: "error",
+          text: `${result.message}${
+            result.errors.length
+              ? ` First error: ${result.errors[0].name} — ${result.errors[0].error}`
+              : ""
+          }`,
+        });
+      }
+      onComplete();
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <>
+      <button
+        onClick={() => setConfirmOpen(true)}
+        disabled={busy || attendeeCount === 0}
+        className="flex items-center gap-2 bg-[var(--maroon)] text-white text-xs font-semibold px-3 py-2 rounded-xl hover:opacity-90 transition-opacity disabled:opacity-50 cursor-pointer"
+        title="Send the thank-you email to all attendees"
+      >
+        {busy ? <FaSpinner className="animate-spin" /> : <FaPaperPlane />}
+        {busy ? "Sending..." : "Send Thank-You Emails"}
+      </button>
+
+      {confirmOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+          onClick={() => setConfirmOpen(false)}
+        >
+          <div
+            className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-full bg-[var(--maroon)]/10 flex items-center justify-center text-[var(--maroon)]">
+                <FaPaperPlane />
+              </div>
+              <h3 className="text-lg font-bold text-gray-900">Send Thank-You Emails</h3>
+            </div>
+            <p className="text-sm text-gray-600 mb-4 leading-relaxed">
+              This will send the thank-you email (with the QR code and profile link) to every
+              attendee with a valid email address.
+            </p>
+            <label className="flex items-start gap-2 mb-5 text-sm text-gray-700 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={skipAlreadySent}
+                onChange={(e) => setSkipAlreadySent(e.target.checked)}
+                className="accent-[var(--maroon)] w-4 h-4 mt-0.5"
+              />
+              <span>
+                Skip attendees who have already received this email.{" "}
+                <span className="text-xs text-gray-500">(Recommended)</span>
+              </span>
+            </label>
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setConfirmOpen(false)}
+                className="px-4 py-2 text-sm rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={run}
+                className="px-4 py-2 text-sm rounded-lg bg-[var(--maroon)] text-white font-semibold hover:opacity-90"
+              >
+                Send Now
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
 
@@ -773,6 +959,11 @@ export default function AdminPage() {
                 <DownloadExcelButton attendees={attendeeList} />
                 <DownloadFeedbackButton />
                 <DownloadAllButton attendees={attendeeList} />
+                <SendAllEmailsButton
+                  attendeeCount={attendeeList.length}
+                  onComplete={fetchAttendees}
+                  onMessage={setMessage}
+                />
               </div>
             )}
           </div>
@@ -862,6 +1053,29 @@ export default function AdminPage() {
                   {/* Actions */}
                   <div className="flex items-center gap-1 flex-shrink-0">
                     <QRDownloadButton id={id} name={attendee.name} token={token} />
+                    <SendEmailButton
+                      id={id}
+                      name={attendee.name}
+                      email={attendee.email}
+                      lastEmailSentAt={attendee.lastEmailSentAt}
+                      onSent={(sentId, when) => {
+                        setAttendeeList((list) =>
+                          list.map((row) =>
+                            row.id === sentId
+                              ? {
+                                  ...row,
+                                  attendee: { ...row.attendee, lastEmailSentAt: when },
+                                }
+                              : row
+                          )
+                        );
+                        setMessage({
+                          type: "success",
+                          text: `Thank-you email sent to ${attendee.name}.`,
+                        });
+                      }}
+                      onError={(text) => setMessage({ type: "error", text })}
+                    />
                     <button
                       onClick={() => openEditModal(id, attendee)}
                       className="text-gray-300 hover:text-[var(--maroon)] transition-colors p-2 cursor-pointer rounded-lg hover:bg-gray-50"

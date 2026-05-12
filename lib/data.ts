@@ -17,6 +17,7 @@ export interface Attendee {
   certificateUrl?: string;
   workshopCertificateUrl?: string;
   conferenceCertificateUrl?: string;
+  lastEmailSentAt?: string | null;
 }
 
 export type AttendeePackage = "conference" | "3lectures" | "5lectures" | "full" | "guest" | "custom";
