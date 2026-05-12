@@ -494,7 +494,7 @@ function fmtSubmittedAt(iso: string): string {
 function buildFeedbackResponsesSheet(
   responses: FeedbackResponse[]
 ): XLSX.WorkSheet {
-  const rows = responses.map((r, i) => {
+  const rows = responses.slice().reverse().map((r, i) => {
     const row: Record<string, string | number> = {
       "#": i + 1,
       "Attendee ID": r.attendeeId,
