@@ -1,6 +1,7 @@
 interface ThankYouEmailParams {
   name: string;
   attendeeUrl: string;
+  qrCid: string;
 }
 
 export interface BuiltEmail {
@@ -23,6 +24,7 @@ function escapeHtml(value: string): string {
 export function buildThankYouEmail({
   name,
   attendeeUrl,
+  qrCid,
 }: ThankYouEmailParams): BuiltEmail {
   const safeName = escapeHtml(name);
   const safeAttendeeUrl = escapeHtml(attendeeUrl);
@@ -61,6 +63,30 @@ export function buildThankYouEmail({
 
 <p style="margin:0 0 16px 0;">To access your downloads, kindly complete a short <strong>evaluation form</strong>. Your feedback helps us shape future Heritage Without Borders gatherings.</p>
 
+<!-- QR Code Section -->
+<table border="0" cellpadding="0" cellspacing="0" role="presentation" style="margin:20px 0;width:100%;background-color:#FFF5F5;border-left:4px solid #800000;border-radius:4px;">
+	<tbody>
+		<tr>
+			<td style="padding:16px 20px;">
+			<p style="margin:0 0 12px 0;color:#800000;font-weight:bold;">Your Attendee QR Code</p>
+			<table border="0" cellpadding="0" cellspacing="0" role="presentation" style="width:100%;">
+				<tbody>
+					<tr>
+						<td style="padding:0 20px 0 0;text-align:center;vertical-align:top;" width="160">
+						<div style="background-color:#ffffff;border:1px solid #e5e7eb;border-radius:4px;padding:8px;display:inline-block;"><img alt="Attendee QR Code" src="cid:${qrCid}" style="display:block;width:140px;height:140px;border:0;" /></div>
+						</td>
+						<td style="padding:0 0 0 20px;vertical-align:top;">
+						<p style="margin:0 0 8px 0;">Scan this QR code or tap the button below to open your <strong>attendee profile</strong>.</p>
+						<p style="margin:0;">From your profile, complete the evaluation form to unlock the presentation files and your certificate.</p>
+						</td>
+					</tr>
+				</tbody>
+			</table>
+			</td>
+		</tr>
+	</tbody>
+</table>
+
 <!-- Attendee Profile / Evaluation Button -->
 <table border="0" cellpadding="0" cellspacing="0" role="presentation" style="margin:20px 0;" width="100%">
 	<tbody>
@@ -89,7 +115,7 @@ export function buildThankYouEmail({
 				<tbody>
 					<tr>
 						<td style="padding:6px 0;width:32px;font-weight:bold;vertical-align:top;color:#800000;">1.</td>
-						<td style="padding:6px 0;vertical-align:top;">Open your attendee profile via the button above.</td>
+						<td style="padding:6px 0;vertical-align:top;">Open your attendee profile by scanning the QR code or tapping the button above.</td>
 					</tr>
 					<tr>
 						<td colspan="2" style="padding:0;border-bottom:1px solid #E5E7EB;"></td>

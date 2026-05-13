@@ -7,6 +7,7 @@ import { getBaseUrl } from "@/lib/baseUrl";
 import { buildThankYouEmail } from "@/lib/emailTemplate";
 import { checkAdminSession } from "@/lib/actions";
 import nodemailer from "nodemailer";
+import QRCode from "qrcode";
 
 interface SendResult {
   success: boolean;
@@ -30,10 +31,12 @@ async function sendViaBrevo({
   to,
   subject,
   html,
+  qrBuffer,
 }: {
   to: string;
   subject: string;
   html: string;
+  qrBuffer: Buffer;
 }): Promise<{ ok: boolean; error?: string }> {
   const smtpLogin = process.env.BREVO_SMTP_LOGIN;
   const smtpKey = process.env.BREVO_SMTP_KEY;
@@ -58,6 +61,13 @@ async function sendViaBrevo({
       to,
       subject,
       html,
+      attachments: [
+        {
+          filename: "qrcode.png",
+          content: qrBuffer,
+          cid: "qrcode",
+        },
+      ],
     });
 
     return { ok: true };
@@ -87,12 +97,20 @@ async function sendThankYouToAttendee(attendeeId: string): Promise<{
   const baseUrl = getBaseUrl();
   const attendeeUrl = `${baseUrl}/?id=${encodeURIComponent(token)}`;
 
+  const qrBuffer = await QRCode.toBuffer(attendeeUrl, {
+    type: "png",
+    width: 512,
+    margin: 2,
+    color: { dark: "#5C1A1A", light: "#FFFFFF" },
+  });
+
   const { subject, html } = buildThankYouEmail({
     name: doc.name ?? "Attendee",
     attendeeUrl,
+    qrCid: "qrcode",
   });
 
-  const result = await sendViaBrevo({ to: doc.email.trim(), subject, html });
+  const result = await sendViaBrevo({ to: doc.email.trim(), subject, html, qrBuffer });
   if (!result.ok) return { ok: false, error: result.error, name: doc.name };
 
   await AttendeeModel.updateOne(
