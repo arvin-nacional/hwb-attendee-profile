@@ -36,10 +36,10 @@ async function sendViaBrevo({
   html: string;
 }): Promise<{ ok: boolean; error?: string }> {
   const smtpLogin = process.env.BREVO_SMTP_LOGIN;
-  const apiKey = process.env.BREVO_API_KEY;
+  const smtpKey = process.env.BREVO_SMTP_KEY;
 
-  if (!smtpLogin || !apiKey) {
-    return { ok: false, error: "BREVO_SMTP_LOGIN or BREVO_API_KEY env var is not configured." };
+  if (!smtpLogin || !smtpKey) {
+    return { ok: false, error: "BREVO_SMTP_LOGIN or BREVO_SMTP_KEY env var is not configured." };
   }
 
   try {
@@ -49,7 +49,7 @@ async function sendViaBrevo({
       secure: false,
       auth: {
         user: smtpLogin,
-        pass: apiKey,
+        pass: smtpKey,
       },
     });
 
@@ -135,12 +135,12 @@ export async function sendBulkThankYouEmails({
   }
 
   const smtpLogin = process.env.BREVO_SMTP_LOGIN;
-  const apiKey = process.env.BREVO_API_KEY;
+  const smtpKey = process.env.BREVO_SMTP_KEY;
 
-  if (!smtpLogin || !apiKey) {
+  if (!smtpLogin || !smtpKey) {
     return {
       success: false,
-      message: "BREVO_SMTP_LOGIN or BREVO_API_KEY env var is not configured.",
+      message: "BREVO_SMTP_LOGIN or BREVO_SMTP_KEY env var is not configured.",
       sent: 0,
       skipped: 0,
       failed: 0,
