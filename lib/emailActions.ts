@@ -6,6 +6,7 @@ import { encryptId } from "@/lib/crypto";
 import { getBaseUrl } from "@/lib/baseUrl";
 import { buildThankYouEmail } from "@/lib/emailTemplate";
 import { checkAdminSession } from "@/lib/actions";
+import nodemailer from "nodemailer";
 
 interface SendResult {
   success: boolean;
@@ -21,23 +22,11 @@ interface BulkSendResult {
   errors: { id: string; name: string; error: string }[];
 }
 
-interface ResendErrorBody {
-  message?: string;
-  name?: string;
-}
-
-const RESEND_ENDPOINT = "https://api.resend.com/emails";
-const DEFAULT_FROM = "Heritage Without Borders <onboarding@resend.dev>";
-
-function getResendKey(): string | null {
-  return process.env.RESEND_API || process.env.RESEND_API_KEY || null;
-}
-
 function getEmailFrom(): string {
-  return process.env.EMAIL_FROM || DEFAULT_FROM;
+  return process.env.EMAIL_FROM || "Heritage Without Borders <hwbsanfo101@gmail.com>";
 }
 
-async function sendViaResend({
+async function sendViaBrevo({
   to,
   subject,
   html,
@@ -46,36 +35,30 @@ async function sendViaResend({
   subject: string;
   html: string;
 }): Promise<{ ok: boolean; error?: string }> {
-  const apiKey = getResendKey();
-  if (!apiKey) {
-    return { ok: false, error: "RESEND_API env var is not configured." };
+  const smtpLogin = process.env.BREVO_SMTP_LOGIN;
+  const apiKey = process.env.BREVO_API_KEY;
+
+  if (!smtpLogin || !apiKey) {
+    return { ok: false, error: "BREVO_SMTP_LOGIN or BREVO_API_KEY env var is not configured." };
   }
 
   try {
-    const res = await fetch(RESEND_ENDPOINT, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
+    const transporter = nodemailer.createTransport({
+      host: "smtp-relay.brevo.com",
+      port: 587,
+      secure: false,
+      auth: {
+        user: smtpLogin,
+        pass: apiKey,
       },
-      body: JSON.stringify({
-        from: getEmailFrom(),
-        to: [to],
-        subject,
-        html,
-      }),
     });
 
-    if (!res.ok) {
-      let detail = res.statusText;
-      try {
-        const body = (await res.json()) as ResendErrorBody;
-        detail = body.message || body.name || detail;
-      } catch {
-        // ignore body parse error
-      }
-      return { ok: false, error: `Resend API ${res.status}: ${detail}` };
-    }
+    await transporter.sendMail({
+      from: getEmailFrom(),
+      to,
+      subject,
+      html,
+    });
 
     return { ok: true };
   } catch (error) {
@@ -103,15 +86,13 @@ async function sendThankYouToAttendee(attendeeId: string): Promise<{
   const token = encryptId(attendeeId);
   const baseUrl = getBaseUrl();
   const attendeeUrl = `${baseUrl}/?id=${encodeURIComponent(token)}`;
-  const qrUrl = `${baseUrl}/api/qr/${encodeURIComponent(token)}`;
 
   const { subject, html } = buildThankYouEmail({
     name: doc.name ?? "Attendee",
-    qrUrl,
     attendeeUrl,
   });
 
-  const result = await sendViaResend({ to: doc.email.trim(), subject, html });
+  const result = await sendViaBrevo({ to: doc.email.trim(), subject, html });
   if (!result.ok) return { ok: false, error: result.error, name: doc.name };
 
   await AttendeeModel.updateOne(
@@ -153,10 +134,13 @@ export async function sendBulkThankYouEmails({
     };
   }
 
-  if (!getResendKey()) {
+  const smtpLogin = process.env.BREVO_SMTP_LOGIN;
+  const apiKey = process.env.BREVO_API_KEY;
+
+  if (!smtpLogin || !apiKey) {
     return {
       success: false,
-      message: "RESEND_API env var is not configured.",
+      message: "BREVO_SMTP_LOGIN or BREVO_API_KEY env var is not configured.",
       sent: 0,
       skipped: 0,
       failed: 0,
@@ -194,8 +178,8 @@ export async function sendBulkThankYouEmails({
         error: result.error || "Unknown error",
       });
     }
-    // Resend free-tier rate limit: 2 req/sec. Pace at ~500ms.
-    await new Promise((r) => setTimeout(r, 550));
+    // Gmail rate limit: ~100-200 emails/day for free accounts. Pace at 1s.
+    await new Promise((r) => setTimeout(r, 1000));
   }
 
   const success = failed === 0;
